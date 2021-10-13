@@ -1,22 +1,83 @@
-\title{Marker alignments paper}
-\author{Wojtek, Kathryn, Dan, possibly others}
+# Marker alignments paper
+by Wojtek, Kathryn, Dan, possibly others
 
 ## Introduction
 
 ```
 to do:
-this is what the work I did is about
-put actual introduction instead of this
+this is an in
+put something here later
 ```
 
-Suppose we have aligned reads of a sequenced sample to a reference database where the sequences are markers for different taxa, and are also related to each other. For example, EukDetect \cite{lind2021accurate} uses `bowtie2` for alignments and an index of BUSCOs specific to eukaryotes. Our method of interpreting the alignments can be used to produce an estimate of what is in the sample that continues to work well when the sample contains multiple similar organisms or an organism not present in the reference. It also does not distort relative abundances reported, so the method can be used for quantitative analysis.
 
-## The technical bit
+## Background
 ```
 to do:
-this tries to explain why what I did is necessary and clever
-make a better case and integrate it
+these are loose notes about of things I've heard about
+research the topic
 ```
+
+K-mer methods and de novo assembly are possible alternatives to read mapping.
+
+Read mapping is the oldest, can be used with whole genomes.
+
+Metaphlan is the canonical tool for running `bowtie2` on a reference of marker genes. Massive reference, [~1.1M unique clade-specific marker genes identified from ~100k reference genomes (~99,500 bacterial and archaeal and ~500 eukaryotic)](https://github.com/biobakery/biobakery/wiki/metaphlan3).
+
+[Kaiju](https://kaiju.binf.ku.dk/) uses protein alignments, trying to get higher sensitivity.
+
+EukDetect tries to be better at detecting just eukaryotes by lowering filtering criteria and carefully constructing a reference that skips the bacteria.
+
+
+## Conclusion
+
+```
+to do:
+this tries to explain why what I did is good and clever
+
+use it to structure further work
+```
+
+
+Our contributions are:
+
+- an explanation how off-target hits happen, which helps authors of tools that interpret read mapping as counts of taxa
+- software that runs and interprets alignments to EukDetect's reference database, and possibly to other reference databases, which helps people who have metagenomic data and need to analyse in taxa present
+- the analysis of MicrobiomeDB data, which helps people who want to know what eukaryotes are present in human microbiomes
+
+
+
+We've not yet contributed, but could contribute:
+
+- a reference for traces of animal DNA, which helps people who study samples where they might be present
+- an analysis of host blood meals of a mosquito dataset, which helps epidemiologists and people who want to know what different mosquitoes feed on
+- software for building references that will work well with our method, which helps bioinformaticians set up analyses like ours
+
+
+
+We've had ideas about:
+
+- using this work to detect anti-microbial resistance genes (is there a universal database of known AMR variants of genes?) 
+
+
+
+Our work is new because:
+
+- nobody else interprets low MAPQ reads as a good alignment in the wrong place
+- nobody else interprets secondary alignments as evidence against taxon being present
+- nobody else uses network methods
+
+
+Our work is good because:
+
+- the method works at very low abundances, it's even better at it than EukDetect
+- the method reports mixtures of related species more sensitively than EukDetect
+- the method does not skip, or bias counts against, species that only approximately match the reference
+
+Our work would be even better if:
+- the method reported estimates of the gap between reference and signal
+- the method of reporting unknown taxa was better
+
+## Methodology and results
 
 ### Definitions
 ```
@@ -53,8 +114,10 @@ We would also like to differentiate bewteen:
 ### Sources of off-target hits
 ```
 to do:
-this part is a little intro before talking about inexact matches
-make it less arbitrary
+this part is all anegdotal
+it's about hits I saw in the data that I think are off-target and that I think I understand
+
+add evidence to it or get rid of it
 ```
 
 Even if the reference contains all taxa that might be in the sample, there are still some possible sources of off-target hits, like:
@@ -73,27 +136,22 @@ An entirely different kind of off-target hits is due to a sequenced organism hav
 ```
 
 to do:
-this part is about how an inexact match looks in alignments
+this is my conjecture for how off-target hits can contain signal:
+- an inexact match looks in alignments as a mix of related matches
+- asking for best alignment sets up competitive mapping and that's not good
+- secondary alignments are good for the next part
 
-it should be a cartoon and much less long
 
+make it a cartoon or less long
+merge with the next part (marker clusters)
+show evidence that it happens, and that it happens in the way described
 ```
 
 Suppose an organism $A$ has a version $b_A$ of a BUSCO $b$, and the reference contains markers $b_{A_1},  \dots  b_{A_n}$ for taxa $A_1,  \dots  A_n$. Let us say $A$ is most similar to $A1$ - perhaps it's another strain of the same species. Assume also a least common ancestor $A_0$ of $A$ and $A_1$, and $A_{00}$ of $A_0, A_2, \dots A_n$.
 As mutations accumulate over time, we can predict $b_A$ will be most similar to $b_{A_1}$, but - in places where $A_1$ has diverged from $A_0$ - some segments of $b_A$ are most similar to other $b_{A_i}$. Some segments of $b_A$ could also be equally similar in all $b_{A_i}$, if there has been reason for that sequence not to change since the joint common ancestor $A_{00}$.
 
-When reads from $b_A$ are aligned to each of the $b_{A_i}$, we expect match identity to form a distribution. The $A_i$ which differ moe from $A$ should have to lower average match identity and fewer matches, but might still attract high identity matches.
+When reads from $b_A$ are aligned to each of the $b_{A_i}$, we expect match identity to form a distribution. The $A_i$ which differ more from $A$ should have to lower average match identity and fewer matches, but might still attract high identity matches.
 
-
-
-```
-to do:
-this is about in an inexact match, there's competitive mapping
-it tries to say why it's not good
-it also tries to say about how the situation changes when we add secondary alignments
-
-it should also be a cartoon!
-```
 
 So, competitive alignment of reads from $b_A$ between $b_{A_1} \dots b_{A_n}$ will not entirely favour the closest $A_1$.
 
@@ -109,23 +167,8 @@ It is possible for $b_{A_1}$ to be very different from $b_A$, or missing from th
 
 
 
-```
-to do:
-this argues why to be using all alignments
 
-remove it because it has too many words and unclear utility
-
-```
-
-
-In the model described above, off-target hits happen when an organism in the sample has a version of a BUSCO which is unexactly similar to multiple markers, and this appears in the alignments as a mix of hits. Removing off-target hits requires a grouping of markers. EukDetect uses filtering on alignment length and the MAPQ field (which skews the results further away from off-target hits) followed by a taxonomic grouping of taxa by genus and a comparison on sequence identity.
-
-This approach has a potential cost of sacrificing signal in clipped alignments at the ends of marker sequences (where a read might contain sequence past the end of the marker), and in hits in regions where markers share a sequence (The MAPQ field is defined by SAM manual as an expression of probability that the mapping position is wrong). Additionally, rejecting off-target hits has to be reconciled with sensitivity to presence of multiple related species in the sample.
-
-A method of summarising alignments that can make use of alignments with worse match identity can extract more information from the sequencing data. If we can treat a match with lower identity is evidence for presence of something other than the matched taxon, the more alignments the better - and we only would only need to balance this benefit against its dimishing returns and rising computational cost to obtaining more alignments.
-
-
-### Marker clusters
+### Building marker clusters
 ```
 to do:
 this introduces marker clusters
@@ -152,19 +195,37 @@ MCL produces clusters with several valuable properties:
 
 
 
-### Using marker clusters to identify off-target hits
+### Reporting taxa
 ```
 to do:
-this finally cuts to the chase - why marker clusters are useful
-reorganize this so that it starts at the top
+this is about how the software makes calls on the taxon level
+currently we sequentially apply a few filters and transforms - this doesn't even describe them all
+the unknown taxon transform doesn't work as well as it should yet
+
+get some clarity on the method and try to improve it?
 ```
 
+#### Filter built from marker clusters
 Clusterings of markers which attract similar matches allows for classifying taxa by having each marker cluster "vote" for its taxon, based on how that taxon's markers do in that cluster. This can be done in a number of ways as long as the marker clusters are required to only be approximately correct.
 
 We choose to measure how good an alignment is through match identity - a number of bases that agree between query and reference divided by the alignment length. Then for each marker cluster, we compute an average for all matches in the cluster, as well as an average for matches in each marker. Then we discard taxa where less than half of each taxon's markers that are at least average in their cluster.
 
 We can expect that this filter will work well enough to discard the additional taxa introduced to the result when setting the aligner to report secondary alignments, since they are on average inferior. Similarly, a version of a BUSCO that is overall inferior but has a locally better subsequence can be expected to accrue bad matches, get paired up with overall better versions of the BUSCO in the marker clustering process, and then help get its taxon rejected.
 
+The filter based on marker clusters leaves us with taxa whose markers are not mostly off-targets of other markers in the reference. There can still be a gap between reference and signal we might get a mixture of matches at a marker level.
+
+#### Taxon transform + identity filter
+We build another graph where taxa are nodes and (directed) edges is a fraction of shared reads. Then we run MCL again to get taxon clusters.
+
+This groups taxa which are similar and, hopefully, each corresponds to at most one taxon. 
+
+#### Minimal evidence filter
+
+After that there's still a need for general filtering like EukDetect and Metaphlan do.
+
+We do it at the end and have separate thresholds for called taxa and vaguely identified blobs, as the burden of evidence is higher for taxa with lower identity.
+
+This part is a combination of read counts, marker counts.
 
 ### Implementation
 ```

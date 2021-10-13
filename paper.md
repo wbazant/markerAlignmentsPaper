@@ -5,7 +5,7 @@ by Wojtek, Kathryn, Dan, possibly others
 
 ```
 to do:
-this is an in
+this is where an introduction will go
 put something here later
 ```
 
@@ -14,7 +14,8 @@ put something here later
 ```
 to do:
 these are loose notes about of things I've heard about
-research the topic
+
+explain how the new thing is new in relation to those things
 ```
 
 K-mer methods and de novo assembly are possible alternatives to read mapping.
@@ -40,7 +41,7 @@ use it to structure further work
 
 Our contributions are:
 
-- an explanation how off-target hits happen, which helps authors of tools that interpret read mapping as counts of taxa
+- an explanation of how off-target hits happen, which helps authors of tools that interpret read mapping as counts of taxa
 - software that runs and interprets alignments to EukDetect's reference database, and possibly to other reference databases, which helps people who have metagenomic data and need to analyse in taxa present
 - the analysis of MicrobiomeDB data, which helps people who want to know what eukaryotes are present in human microbiomes
 
@@ -48,9 +49,9 @@ Our contributions are:
 
 We've not yet contributed, but could contribute:
 
-- a reference for traces of animal DNA, which helps people who study samples where they might be present
-- an analysis of host blood meals of a mosquito dataset, which helps epidemiologists and people who want to know what different mosquitoes feed on
-- software for building references that will work well with our method, which helps bioinformaticians set up analyses like ours
+- software for building references that will work well with our method, which would help bioinformaticians in setting up analyses like ours
+- a reference for traces of animal DNA, which would help people who study samples where they might be present
+- an analysis of host blood meals of a mosquito dataset, which would help epidemiologists and people who want to know what different mosquitoes feed on
 
 
 
@@ -60,22 +61,25 @@ We've had ideas about:
 
 
 
-Our work is new because:
+Our method is new because:
 
 - nobody else interprets low MAPQ reads as a good alignment in the wrong place
 - nobody else interprets secondary alignments as evidence against taxon being present
 - nobody else uses network methods
 
 
-Our work is good because:
+Our method is good because:
 
 - the method works at very low abundances, it's even better at it than EukDetect
 - the method reports mixtures of related species more sensitively than EukDetect
 - the method does not skip, or bias counts against, species that only approximately match the reference
 
-Our work would be even better if:
-- the method reported estimates of the gap between reference and signal
-- the method of reporting unknown taxa was better
+Our method would be even better if:
+
+- the method modelled the gap between reference and signal
+  + reporting it could be interesting
+  + one clear filter for taxa could be more accurate than a few sequential ones
+  + an explanation how the gap between reference and signal looks in read mapping results when they're summarized by taxon
 
 ## Methodology and results
 
@@ -227,7 +231,7 @@ We do it at the end and have separate thresholds for called taxa and vaguely ide
 
 This part is a combination of read counts, marker counts.
 
-### Implementation
+### Software implementation
 ```
 to do:
 This section is about the software
@@ -246,25 +250,17 @@ We implement our way of interpreting results of alignments to markers as a Pytho
 
 Counts of entries and the coverage field are used for quantification, and identity is mainly used for clustering and filtering.
 
-We implement filtering and reporting using SQL queries and Python code. Additionally, clustering uses additional tables and a `markov_clustering` package, a Python implementation of the MCL algorithm.
+Filtering and reporting is implemented with SQL queries and Python code. 
 
-In addition we also provide a Nextflow workflow, `marker-alignments-nextflow`.
+Clustering is based on a `markov_clustering` package, a Python implementation of the MCL algorithm.
 
-### Shortcomings and potential future work
-```
-to do:
-This section is a catch-all of stuff that is bad
-replace it with an entirely different section on the same topic
-```
+In addition we also provide a Nextflow workflow, `marker-alignments-nextflow`. All our software is freely available on GitHub under an MIT license.
 
-We add an up-front threshold on alignment length of 60 bases. This is a filter borrowed from EukDetect and we do not have a good rationale for keeping the filter, except without the filter, some samples (our analysis of NICU NEC dataset) contain a lot of matches to taxa that are not plausibly present given the sequenced samples. We suspect they might be incorrect annotations, or annotations that end with common elements (like binding sites) but we have not investigated further.
-
-We also see an occasional inclusion of matches to model organisms. We suspect these are BUSCOs that are commonly present, but not commonly annotated. They happen rarely enough to occur twice for any dataset, so an ad hoc criterion of (TODO implement this!) twenty reads for taxa reported only in one sample per dataset removes these matches and keeps matches where we have much more confidence despite them being present only in one dataset.
 
 ## Examples
 ```
 to do:
-this is a catch-all with data examples
+this is a catch-all with data examples that served me as test cases
 sprinkle these throughout, remove the rest
 ```
 
@@ -289,7 +285,8 @@ Maybe a drawing or a visualisation: a graph with BUSCOs corresponding to a shadi
 ```
 to do:
 This is about MicrobiomeDB results.
-Decide whether it should even be here.
+
+Decide if they should be a part of the paper and how.
 ```
 
 We analyzed all data on MicrobiomeDB.
@@ -298,9 +295,8 @@ We analyzed all data on MicrobiomeDB.
 | -- | -- |-- | -- |
 | HMP | xxx | yyy | zzz |
 
-The data can be viewed on MicrobiomeDB :).
 
-#### DIABIMMUNE
+### DIABIMMUNE
 ```
 to do:
 This is an expanded part of the above that does a comparison for DIABIMMUNE.
@@ -343,7 +339,7 @@ diabimmune.tsv:3104340  G80329  306901  Chaetomium_globosum_CBS_14851   3
 diabimmune.tsv:3104340  G80329  5480    Candida_parapsilosis    19
 diabimmune.tsv:3104340  G80329  5533    Rhodotorula     3
 ```
-we are able to show that the presence of additional C. albicans is very convincing - the hits are in entirely different marker clusters. (edited) 
+The above does not show that, but we are able to show that the presence of additional C. albicans is very convincing - the hits are in entirely different marker clusters.
 
 
 ### Potential application 1 - host blood meal

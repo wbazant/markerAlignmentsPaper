@@ -1,35 +1,70 @@
 # Marker alignments paper
 by Wojtek, Kathryn, Dan, possibly others
 
-## Introduction
+# Introduction
 
 ```
 to do:
-this is where an introduction will go
-put something here later
+This claims that reference bias is a problem in read mapping, and particularly for eukaryotes
+
+It's a working theory at best
+add citations / context or get rid of it
 ```
 
+Methods of quantifying taxa in metagenomic samples that based on read mapping suffer from reference bias. 
 
-## Background
+
+Mechanisms of variation are different between prokaryotes and eukaryotes. Bacteria lose whole genes and functions, but also gain them through recombination. Eukaryotic genes have introns, so the tweaking is more gradual, and small differences in sequence lead to very different phenotypes.
+
+In eukaryotes, mapping reads for an organism that is only broadly characterized in the reference (a different strain or species) results in reference bias. The organism might be skipped, or reported as a mixture of a closely related species.
+
+We show reference bias can be mitigated by incorporating secondary alignments as evidence against some taxa being present. We show this increases sensitivity when mapping to a EukDetect reference of BUSCOs and replacing the MAPQ filter. We also show we can identify off-target hits in the output of CCMetagen.
+
+
+# Background
 ```
 to do:
-these are loose notes about of things I've heard about
+these are loose notes about things I've heard about
 
-explain how the new thing is new in relation to those things
+explain how our new thing is new in relation to those things
 ```
 
-K-mer methods and de novo assembly are possible alternatives to read mapping.
+## Reference bias
 
-Read mapping is the oldest, can be used with whole genomes.
 
-Metaphlan is the canonical tool for running `bowtie2` on a reference of marker genes. Massive reference, [~1.1M unique clade-specific marker genes identified from ~100k reference genomes (~99,500 bacterial and archaeal and ~500 eukaryotic)](https://github.com/biobakery/biobakery/wiki/metaphlan3).
+
+
+
+
+## Quantifying Eukaryotes is hard
+
+
+1. Euk genomes are widely contaminated\reference{eukdetect} so bacterial reads match to them spontaneously.
+
+2. The level of noise is high enough that reads to e.g. fungal sequences completely fail.
+[The use of taxon-specific reference databases compromises metagenomic classification](https://pubmed.ncbi.nlm.nih.gov/32106809/)
+
+3. The Euk genomes are larger and differ from each other by less
+
+4. The references are quite spotty: there's like a thousand assemblies, 148,000 described, 2-3 mln estimated https://en.wikipedia.org/wiki/Fungus.
+
+5. Telling apart multiple species in the sample: an inexact match to a reference looks like a mixture of related species
+
+## Current tools
+
+Finding taxa in a metegenomic sample can be achieved by mapping reads to a reference database. K-mer methods (Kraken) and de novo assembly (anvio) are possible alternatives to read mapping.
+
+Metaphlan is the most established tool for running `bowtie2` on a reference of marker genes. Massive reference, [~1.1M unique clade-specific marker genes identified from ~100k reference genomes (~99,500 bacterial and archaeal and ~500 eukaryotic)](https://github.com/biobakery/biobakery/wiki/metaphlan3).
 
 [Kaiju](https://kaiju.binf.ku.dk/) uses protein alignments, trying to get higher sensitivity.
 
-EukDetect tries to be better at detecting just eukaryotes by lowering filtering criteria and carefully constructing a reference that skips the bacteria.
+CCMetagen is an alternative new tool developed for genomic epidemiology use. It does not need a special reference, it is based on a specialised aligner that handles redundant databases, so it can use all possible genomes as its reference. Further it does reference-guided assembly on the reads, and assigns each sequence a separate match.
+
+EukDetect achieves sensistivity through aligning to a reference of Eukaryotic BUSCOs and heavy filtering. The possibly-ambiguous reads are assigned low MAPQ scores.
 
 
-## Conclusion
+
+# Conclusion
 
 ```
 to do:
@@ -49,6 +84,7 @@ Our contributions are:
 
 We've not yet contributed, but could contribute:
 
+- a better way of integrating multiple results for a taxon
 - software for building references that will work well with our method, which would help bioinformaticians in setting up analyses like ours
 - a reference for traces of animal DNA, which would help people who study samples where they might be present
 - an analysis of host blood meals of a mosquito dataset, which would help epidemiologists and people who want to know what different mosquitoes feed on
@@ -81,9 +117,9 @@ Our method would be even better if:
   + one clear filter for taxa could be more accurate than a few sequential ones
   + an explanation how the gap between reference and signal looks in read mapping results when they're summarized by taxon
 
-## Methodology and results
+# Methodology and results
 
-### Definitions
+## Definitions
 ```
 to do:
 this is a list of relevant words and how I use them
@@ -115,7 +151,7 @@ We would also like to differentiate bewteen:
 
 
 
-### Sources of off-target hits
+## Sources of off-target hits
 ```
 to do:
 this part is all anegdotal
@@ -136,7 +172,7 @@ Our method addresses these kinds of off-target hits through a combination of fil
 
 An entirely different kind of off-target hits is due to a sequenced organism having no exact match in the reference. We will describe how this happens, and how it can be addressed by making use of secondary alignments.
 
-#### A model for off-target hits due to inexact matches
+### A model for off-target hits due to inexact matches
 ```
 
 to do:
@@ -172,7 +208,7 @@ It is possible for $b_{A_1}$ to be very different from $b_A$, or missing from th
 
 
 
-### Building marker clusters
+## Building marker clusters
 ```
 to do:
 this introduces marker clusters
@@ -199,17 +235,18 @@ MCL produces clusters with several valuable properties:
 
 
 
-### Reporting taxa
+## Reporting taxa
 ```
 to do:
 this is about how the software makes calls on the taxon level
-currently we sequentially apply a few filters and transforms - this doesn't even describe them all
+currently we sequentially apply a few filters and transforms
+(this doesn't even describe them all)
 the unknown taxon transform doesn't work as well as it should yet
 
 get some clarity on the method and try to improve it?
 ```
 
-#### Filter built from marker clusters
+### Filter built from marker clusters
 Clusterings of markers which attract similar matches allows for classifying taxa by having each marker cluster "vote" for its taxon, based on how that taxon's markers do in that cluster. This can be done in a number of ways as long as the marker clusters are required to only be approximately correct.
 
 We choose to measure how good an alignment is through match identity - a number of bases that agree between query and reference divided by the alignment length. Then for each marker cluster, we compute an average for all matches in the cluster, as well as an average for matches in each marker. Then we discard taxa where less than half of each taxon's markers that are at least average in their cluster.
@@ -218,12 +255,12 @@ We can expect that this filter will work well enough to discard the additional t
 
 The filter based on marker clusters leaves us with taxa whose markers are not mostly off-targets of other markers in the reference. There can still be a gap between reference and signal we might get a mixture of matches at a marker level.
 
-#### Taxon transform + identity filter
+### Taxon transform + identity filter
 We build another graph where taxa are nodes and (directed) edges is a fraction of shared reads. Then we run MCL again to get taxon clusters.
 
 This groups taxa which are similar and, hopefully, each corresponds to at most one taxon. 
 
-#### Minimal evidence filter
+### Minimal evidence filter
 
 After that there's still a need for general filtering like EukDetect and Metaphlan do.
 
@@ -231,7 +268,7 @@ We do it at the end and have separate thresholds for called taxa and vaguely ide
 
 This part is a combination of read counts, marker counts.
 
-### Software implementation
+## Software implementation
 ```
 to do:
 This section is about the software
@@ -257,14 +294,14 @@ Clustering is based on a `markov_clustering` package, a Python implementation of
 In addition we also provide a Nextflow workflow, `marker-alignments-nextflow`. All our software is freely available on GitHub under an MIT license.
 
 
-## Examples
+# Examples
 ```
 to do:
 this is a catch-all with data examples that served me as test cases
 sprinkle these throughout, remove the rest
 ```
 
-### Example 1 - off-target hits in more than just a genus
+## Example 1 - off-target hits in more than just a genus
 SRR6262267 is a run from a sample dominated by *Trichosporon asahii* - according to SRA Traces, 23.68% of the reads in the sample can be attributed to this organism ([source](https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=SRR6262267)).
 
 ```
@@ -273,15 +310,15 @@ Actually, EukDetect reports only T. asahii, because the other off-target hits ar
 TODO this will require some visualisation tools.
 ```
 
-### Example 2 - sticking to the reference too closely brings up nothing
+## Example 2 - sticking to the reference too closely brings up nothing
 Mucor example, demonstrate EukDetect returns nothing which it really should.
 
-### Example 3 - BUSCOs vs clusters
+## Example 3 - BUSCOs vs clusters
 Maybe a drawing or a visualisation: a graph with BUSCOs corresponding to a shading of each node, added edges, and a shading or a line around clusters that end up together?
 
-## Applications
+# Applications
 
-### MicrobiomeDB studies
+## MicrobiomeDB studies
 ```
 to do:
 This is about MicrobiomeDB results.
@@ -296,7 +333,7 @@ We analyzed all data on MicrobiomeDB.
 | HMP | xxx | yyy | zzz |
 
 
-### DIABIMMUNE
+## DIABIMMUNE
 ```
 to do:
 This is an expanded part of the above that does a comparison for DIABIMMUNE.
@@ -308,7 +345,7 @@ Here's a not yet formal comparison to DIABIMMUNE.
 Just the paper DIABIMMUNE reported 8 samples. I think it's mostly the difference between references - new one has a bit more.
 We're more courageous in reporting species, and report 119 extra results. It shows up for the most common S. cerevisiae - we call it 42 more times - and M. restricta - 9 more times.
 
-#### 3100266
+### 3100266
 ```
 > EukDetect reports P. nordicum, but we realise it's a cluster:
 id      taxon   num_markers     num_reads       avg_identity
@@ -328,7 +365,7 @@ id      taxon   num_markers     num_reads       avg_identity
 ```
 and because they're all above 95%, we return them all. What I would prefer is to return the whole cluster, but how should I know?
 
-#### 3104340
+### 3104340
 ```
 G80329
 diabimmune-paper.tsv.csv:G80329,Candida parapsilosis,5480,27,78,15.70%,8.04%,99.64%
@@ -342,12 +379,13 @@ diabimmune.tsv:3104340  G80329  5533    Rhodotorula     3
 The above does not show that, but we are able to show that the presence of additional C. albicans is very convincing - the hits are in entirely different marker clusters.
 
 
-### Potential application 1 - host blood meal
+## Potential application 1 - host blood meal
 Identify host blood meal in metagenomic studies of mosquitos.
 
 
-### Potential application 2 - AMR
+## Potential application 2 - AMR
 Detection/quantification of antimicrobial resistance (AMR) genes in metagenomic samples
 
+\bibliographystyle{alpha}
 \bibliography{paper}
 

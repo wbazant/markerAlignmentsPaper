@@ -171,6 +171,12 @@ Diagram 1b. If X' misses some of the sequence, some reads map to X'' instead.
 
 
 ## Summary of our method
+```
+This is the method
+
+It is unfortunately really ad-hoc, how do I make it less ad-hoc?
+
+```
 
 ### `bowtie2`
 We set `bowtie2` to report multiple alignments per query. This lets us add structure on the level of markers:
@@ -185,7 +191,7 @@ This lets us set up a sequence of filters similar to EukDetect without relying o
 
 *Filter 1. (Marker clusters)*
 
-For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa whose most markers are below average.
+For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa for which the majority of the markers are below average.
 
 *Filter 2. (Unambiguous hits)*
 

@@ -7,26 +7,36 @@ import json
 import statistics
 import logging
 import subprocess
+from pathlib import Path
 
 
 from marker_alignments.pysam2 import compute_alignment_identity
 
 def main_loop(**kwargs):
-    result = {}
-    for base_error_rate in kwargs['base_error_rates']:
-        result[base_error_rate] = {} 
-        for read_length in kwargs['read_lengths']:
-            result[base_error_rate][read_length] = do_one(read_length, base_error_rate, **kwargs)
+    result = []
+   
+    for mutation_rate in kwargs['mutation_rates']:
+        for base_error_rate in kwargs['base_error_rates']:
+            for read_length in kwargs['read_lengths']:
+                d = do_one(read_length, base_error_rate, mutation_rate, **kwargs)
+                d['mutation_rate'] = mutation_rate
+                d['base_error_rate'] = base_error_rate
+                d['read_length'] = read_length
+                result.append(d)
     print(json.dumps(result, indent = 4))
 
-def do_one(read_length, base_error_rate, wd, logger, ref_db, sim_source, seed, **kwargs):
-    sim_path_1 = "/".join([wd, "{read_length}.{base_error_rate}.wgsim_1.fq".format(read_length = read_length, base_error_rate = base_error_rate)])
-    sim_path_2 = "/".join([wd, "{read_length}.{base_error_rate}.wgsim_2.fq".format(read_length = read_length, base_error_rate = base_error_rate)])
+def do_one(read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_source, seed, **kwargs):
+    Path(wd).mkdir(parents=True, exist_ok=True)
+
+    prefix = f"{read_length}.{base_error_rate}.{mutation_rate}"
+    sim_path_1 = f"{wd}/{prefix}.wgsim_1.fq"
+    sim_path_2 = f"{wd}/{prefix}.wgsim_2.fq"
     if not (os.path.isfile(sim_path_1) and os.path.isfile(sim_path_2)):
         wgsim_cmd = ["wgsim",
             "-S", str(seed),
             "-1", str(read_length), "-2", str(read_length),
             "-e", str(base_error_rate),
+            "-r", str(mutation_rate),
             sim_source,
             sim_path_1,
             sim_path_2,
@@ -34,7 +44,7 @@ def do_one(read_length, base_error_rate, wd, logger, ref_db, sim_source, seed, *
         logger.info("Running: " + " ".join(wgsim_cmd))
         subprocess.run(wgsim_cmd, check=True, stderr = subprocess.DEVNULL, stdout = subprocess.DEVNULL)
 
-    sam_path = "/".join([wd,  "{read_length}.{base_error_rate}.alignments.sam".format(read_length = read_length, base_error_rate = base_error_rate)])
+    sam_path= f"{wd}/{prefix}.alignments.sam"
     if not os.path.isfile(sam_path):
         sam_cmd = ["bowtie2",
             "-x", ref_db,
@@ -50,7 +60,7 @@ def do_one(read_length, base_error_rate, wd, logger, ref_db, sim_source, seed, *
             subprocess.run(sam_cmd, check=True, stdout = f, stderr = sys.stderr)
         subprocess.run(["mv", "-v", sam_path + ".tmp", sam_path])
 
-    summary_path = "/".join([wd,  "{read_length}.{base_error_rate}.summary.json".format(read_length = read_length, base_error_rate = base_error_rate)])
+    summary_path= f"{wd}/{prefix}.summary.json"
 
     if not os.path.isfile(summary_path):
         logger.info("Summarizing" + " ".join([sam_path, sim_path_1]))
@@ -157,7 +167,7 @@ def summarize_sim_alignment(input_alignment_file):
 
 def main(argv=sys.argv[1:]):
     parser = argparse.ArgumentParser(
-      description="summarize_marker_alignments - process and summarise alignments of metagenomic sequencing reads to reference databases of marker genes",
+      description="simulate_and_align",
       formatter_class = argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--reference", type=str, action="store", dest="ref_db", required=True)
@@ -165,8 +175,9 @@ def main(argv=sys.argv[1:]):
     parser.add_argument("--dir", type=str, action="store", dest="wd", default = os.getcwd())
 
     parser.add_argument("--verbose", action="store_true", dest="verbose")
-    parser.add_argument("--read-lengths", nargs='+', type=int, action = "store", dest = "read_lengths")
-    parser.add_argument("--base-error-rates", nargs='+', type=float,action = "store",  dest = "base_error_rates")
+    parser.add_argument("--read-lengths", nargs='+', type=int, action = "store", dest = "read_lengths", required = True)
+    parser.add_argument("--base-error-rates", nargs='+', type=float,action = "store",  dest = "base_error_rates", required = True)
+    parser.add_argument("--mutation-rates", nargs='+', type=float,action = "store",  dest = "mutation_rates", required = True)
     parser.add_argument("--seed", type=int, default = 1337)
 
     options=parser.parse_args(argv)

@@ -63,7 +63,7 @@ def do_one(read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_
     summary_path= f"{wd}/{prefix}.summary.json"
 
     if not os.path.isfile(summary_path):
-        logger.info("Summarizing" + " ".join([sam_path, sim_path_1]))
+        logger.info("Summarizing " + " ".join([sam_path, sim_path_1]))
         summary = summarize_sim_alignment(sam_path)
         grep_cmd = ['grep', '-c', '^@', sim_path_1]
         logger.info("Running: " + " ".join(grep_cmd))
@@ -72,6 +72,11 @@ def do_one(read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_
             'grep', '-o', '^@.*at2759', sim_path_1, '|', "uniq", '|', "wc", "-l" ]
         logger.info("Running: " + " ".join(grep_cmd_2))
         summary["numBuscosTotal"] = int(subprocess.run([" ".join(grep_cmd_2)], shell = True, stdout = subprocess.PIPE).stdout.decode(encoding="utf-8").replace("\n", ""))
+        summary["precisionQueries"] = 1.0 * summary["numQueriesMappedOnlyAsMatch"] / summary["numQueriesMapped"]
+        summary["precisionBuscos"] = 1.0 * summary["numBuscosMappedOnlyAsMatch"] / summary["numBuscosMapped"]
+        summary["recallQueries"] = 1.0 * summary["numQueriesMappedOnlyAsMatch"] / summary["numQueriesTotal"]
+        summary["recallBuscos"] = 1.0 * summary["numBuscosMappedOnlyAsMatch"] / summary["numBuscosTotal"]
+
 
         with open(summary_path, 'w') as f:
             json.dump(summary, f)

@@ -151,8 +151,8 @@ Diagram 1a. With X' and X'' differing from X only by aggregated single-nucleotid
 
 Reads sampled with no added errors align back to the reference with about 98% success rate, with about 95% of the reads aligning back to the BUSCO and taxon they were sampled from, and about 90% pass EukDetect's filter of MAPQ >= 30. On the other hand, reads sampled with `wgsim`s default error rate (0.0010 mutation rate, 0.15 fraction of indels, and 0.30 indels extended ) align back to the reference more or less as well, but only about half the reads have MAPQ >= 30.
 
-
-
+### First simulation
+![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
 
 We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
 

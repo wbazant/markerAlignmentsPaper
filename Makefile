@@ -18,5 +18,5 @@ figures:
 figures/wgsimMutationRate.png: figures tmp/wgsimMutationRate.json
 	python3 scripts/plot_recall_and_mapq_for_varying_mutation_rate.py --input-json tmp/wgsimMutationRate.json --output-png figures/wgsimMutationRate.png
 
-paper.pdf: paper.md figures/wgsimMutationRate.png
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

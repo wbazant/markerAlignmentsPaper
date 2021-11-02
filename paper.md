@@ -134,11 +134,39 @@ Discuss the diagrams? I want to demonstrate low MAPQ and off-target hits
 
 ```
 
-Methods of differentiating species through their sequences can be tested in silico through simulation[@hovhannisyan2020crossmapper]. We use `wgsim`[@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs, and use `bowtie2` to align them back to the reference.
+Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs, and use `bowtie2` [@langmead2012fast] to align them back to the reference.
 
 In the SAM specification [http://samtools.github.io/hts-specs/SAMv1.pdf] the MAPQ field is defined as a measure of mapping quality - certainty of where the read should be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample.
 
-We show that EukDetect's MAPQ >= 30 filter introduces reference bias.
+We show that EukDetect's MAPQ >= 30 filter is unnecessarily restrictive towards novel strains, and precludes an otherwise feasible identification of a novel species to its genus.
+
+
+\newpage
+
+
+### Novel strains - MAPQ drops before recall drops
+We sample reads from the reference running `wgsim` with mutation rate in a range of values between 0.0 and 0.2, base error rate set to zero, and other parameters default to investigate the effect of a sequenced species being of a different genotype / strain than the reference.
+
+We see that the fraction of reads passing through EukDetect's MAPQ filter drops rapidly as mutation rate increases, while recall (a fraction of reads that map back to the BUSCO they were sampled from) is much more robust:
+
+
+![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
+
+Precision (a proportion of correctly mapping reads among the reads that map to any reference) stays between 95% and 96% throughout the range of values. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
+
+We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model.
+
+\newpage
+### Novel species - low MAPQ, recall
+
+We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
+
+We find a third of such reads still aligns, 316 / 371 organisms have some reads that map to something else. Some organisms map all over, but they mostly show up as a mixture of species in the same genus. MAPQ is overwhelmingly near zero.
+
+\newpage
+### Errors favour closely related species
+
+We have no data to argue this, only a theoretical model presented by these two diagrams:
 
 
 Diagram 1a. With X' and X'' differing from X only by aggregated single-nucleotide changes, reads preferentially map to the closer X'. MAPQ and percentage identity get lower, but the information in the reads is sufficient to report the nearest taxon.
@@ -148,16 +176,6 @@ Diagram 1a. With X' and X'' differing from X only by aggregated single-nucleotid
  \____ X'   AACAAACAAAAATA
   \____ X   AAAAAAAAAAAAAA
 ```
-
-Reads sampled with no added errors align back to the reference with about 98% success rate, with about 95% of the reads aligning back to the BUSCO and taxon they were sampled from, and about 90% pass EukDetect's filter of MAPQ >= 30. On the other hand, reads sampled with `wgsim`s default error rate (0.0010 mutation rate, 0.15 fraction of indels, and 0.30 indels extended ) align back to the reference more or less as well, but only about half the reads have MAPQ >= 30.
-
-### First simulation
-![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
-
-We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
-
-We find a third of such reads still aligns, 316 / 371 organisms have some reads that map to something else. Some organisms map all over, but they mostly show up as a mixture of species in the same genus. MAPQ is overwhelmingly near zero.
-
 
 Diagram 1b. If X' misses some of the sequence, some reads map to X'' instead.
 ```

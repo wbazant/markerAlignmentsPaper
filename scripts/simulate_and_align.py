@@ -1,4 +1,5 @@
 import sys
+import re
 import os
 import argparse
 import pysam
@@ -12,20 +13,30 @@ from pathlib import Path
 
 from marker_alignments.pysam2 import compute_alignment_identity
 
+def read_marker_to_taxon(path):
+    result = {}
+    with open(path, 'r') as f:
+        for line in f:
+            (marker, taxon) = line.rstrip().split("\t")
+            result[marker] = taxon
+    return result
+
 def main_loop(**kwargs):
     result = []
    
+    marker_to_taxon = read_marker_to_taxon(kwargs['refdb_marker_to_taxon_path'])
+
     for mutation_rate in kwargs['mutation_rates']:
         for base_error_rate in kwargs['base_error_rates']:
             for read_length in kwargs['read_lengths']:
-                d = do_one(read_length, base_error_rate, mutation_rate, **kwargs)
+                d = do_one(marker_to_taxon, read_length, base_error_rate, mutation_rate, **kwargs)
                 d['mutation_rate'] = mutation_rate
                 d['base_error_rate'] = base_error_rate
                 d['read_length'] = read_length
                 result.append(d)
     print(json.dumps(result, indent = 4))
 
-def do_one(read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_source, seed, **kwargs):
+def do_one(marker_to_taxon, read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_source, seed, **kwargs):
     Path(wd).mkdir(parents=True, exist_ok=True)
 
     prefix = f"{read_length}.{base_error_rate}.{mutation_rate}"
@@ -64,7 +75,7 @@ def do_one(read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_
 
     if not os.path.isfile(summary_path):
         logger.info("Summarizing " + " ".join([sam_path, sim_path_1]))
-        summary = summarize_sim_alignment(sam_path)
+        summary = summarize_sim_alignment(marker_to_taxon, sam_path)
         grep_cmd = ['grep', '-c', '^@', sim_path_1]
         logger.info("Running: " + " ".join(grep_cmd))
         summary["numQueriesTotal"] = int(subprocess.run(grep_cmd, stdout = subprocess.PIPE).stdout.decode(encoding="utf-8").replace("\n", ""))
@@ -85,11 +96,62 @@ def do_one(read_length, base_error_rate, mutation_rate, wd, logger, ref_db, sim_
     with open(summary_path, 'r') as f:
         return json.load(f)
 
-def summarize_sim_alignment(input_alignment_file):
+# removed $ from the end compared to marker_alignments version
+#other_MGCollapse_EPSP3-12_382_886_0:0:0_0:0:0_0
+eukprot_refdb_regex_taxon = "^[a-z]+-(.*_[a-z-]+(?:_.*)?)-[0-9]+at2759-[A-Z]\d|^[a-z]+-(.*)...Collapse_[^_]*|^()other_MGCollapse_[^_]*"
+eukprot_refdb_regex_marker = "^[a-z]+-.*_[a-z-]+(?:_.*)?-([0-9]+at2759)-[A-Z]\d|^[a-z]+-.*(..Collapse_[^_]*)|^(other_MGCollapse_[^_]*)"
+eukprot_refdb_regex_busco = "^([a-z]+-.*_[a-z-]+(?:_.*)?-([0-9]+at2759)-[A-Z]\d|^[a-z]+-.*..Collapse_[^_]*|^other_MGCollapse_[^_]*)"
+
+pattern_taxon = re.compile(eukprot_refdb_regex_taxon)
+pattern_marker = re.compile(eukprot_refdb_regex_marker)
+pattern_busco = re.compile(eukprot_refdb_regex_busco)
+
+def next_g(search):
+    return next(g for g in search.groups() if g is not None)
+
+def match(marker_to_taxon, query_name, reference_name):
+    # not a cross-match if the read aligns to the other copy of the bu(m)sco
+
+    source_taxon_search = pattern_taxon.search(query_name) 
+    if not source_taxon_search:
+        raise ValueError(query_name)
+    source_taxon = next_g(source_taxon_search)
+
+    source_marker_search = pattern_marker.search(query_name) 
+    source_marker = next_g(source_marker_search)
+
+    source_busco_search = pattern_busco.search(query_name) 
+    source_busco = next_g(source_busco_search)
+
+    matched_taxon_search = pattern_taxon.search(reference_name) 
+    if not matched_taxon_search:
+        raise ValueError(reference_name)
+    matched_taxon = next_g(matched_taxon_search)
+
+    matched_marker_search = pattern_marker.search(reference_name) 
+    matched_marker = next_g(matched_marker_search)
+
+    matched_busco_search = pattern_busco.search(reference_name) 
+    matched_busco = next_g(matched_busco_search)
+
+
+
+    is_match = re.sub("-D\d$", "", source_busco) == re.sub("-D\d$", "", matched_busco)
+    is_match_2 = (source_taxon == matched_taxon and source_marker == matched_marker)
+
+    if is_match != is_match_2:
+        raise ValueError(query_name, reference_name, is_match, is_match_2, source_taxon, matched_taxon, source_marker, matched_marker)
+
+    source_taxid = marker_to_taxon[source_busco]
+    matched_taxid = marker_to_taxon[matched_busco]
+    
+    return source_taxid, source_busco, matched_taxid, matched_busco, is_match
+
+def summarize_sim_alignment(marker_to_taxon, input_alignment_file):
     alignment_file = pysam.AlignmentFile(input_alignment_file, check_sq=False)
 
     queries = {}
-    buscos = {}
+    matched_buscos = {}
     mapqs = {}
     query_lengths = {}
 
@@ -102,14 +164,11 @@ def summarize_sim_alignment(input_alignment_file):
         mapq = read.mapq
         query_length = read.infer_query_length()
 
-        # not a cross-match if the read aligns to the other copy of the bu(m)sco
-        busco = re.sub("-D\d$", "", read.reference_name)
+        source_taxon, source_busco, matched_taxon, matched_busco, is_match = match(marker_to_taxon, query, read.reference_name)
 
-        is_match = query.startswith(busco)
-
-        if busco not in buscos:
-            buscos[busco] = {True: 0, False: 0}
-        buscos[busco][is_match] += 1
+        if matched_busco not in matched_buscos:
+            matched_buscos[matched_busco] = {True: 0, False: 0}
+        matched_buscos[matched_busco][is_match] += 1
 
         if query not in queries:
             queries[query] = {True: 0, False: 0}
@@ -158,8 +217,8 @@ def summarize_sim_alignment(input_alignment_file):
     return {
         "numQueriesMapped": len (queries.keys()),
         "numQueriesMappedOnlyAsMatch": len ([k for k in queries if queries[k][True] > 0 and queries[k][False] == 0 ]),
-        "numBuscosMapped": len (buscos.keys()),
-        "numBuscosMappedOnlyAsMatch": len ([k for k in buscos if buscos[k][True] > 0 and buscos[k][False] == 0 ]),
+        "numBuscosMapped": len (matched_buscos.keys()),
+        "numBuscosMappedOnlyAsMatch": len ([k for k in matched_buscos if matched_buscos[k][True] > 0 and matched_buscos[k][False] == 0 ]),
         "meanIdentitiesMatchTrue": statistics.mean(identities_match_true) if identities_match_true else 0.0,
         "meanIdentitiesMatchFalse": statistics.mean(identities_match_false) if identities_match_false else 0.0,
         "mapqsAvg": mapqs_avg,
@@ -168,6 +227,8 @@ def summarize_sim_alignment(input_alignment_file):
         "query_lengthsAvg": query_lengths_avg,
         "query_lengthsFractionAtLeast60": query_lengths_n_at_least_60 / query_lengths_n if query_lengths_n else 0,
     }
+
+
 
 
 def main(argv=sys.argv[1:]):
@@ -184,6 +245,7 @@ def main(argv=sys.argv[1:]):
     parser.add_argument("--base-error-rates", nargs='+', type=float,action = "store",  dest = "base_error_rates", required = True)
     parser.add_argument("--mutation-rates", nargs='+', type=float,action = "store",  dest = "mutation_rates", required = True)
     parser.add_argument("--seed", type=int, default = 1337)
+    parser.add_argument("--refdb-marker-to-taxon-path", type=str, action="store", dest="refdb_marker_to_taxon_path", help = "Lookup file, two columns - marker name, taxon name")
 
     options=parser.parse_args(argv)
 

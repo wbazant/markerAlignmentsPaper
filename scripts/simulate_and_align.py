@@ -186,8 +186,9 @@ def match(ncbi, marker_to_taxon, query_name, reference_name):
 
     return source_taxid, source_busco, matched_taxid, matched_busco, match_type
 
-def is_one_element_dict(d, required_element):
-    return len(d) == 1 and required_element in d
+def dict_has_at_most_the_keys(d, allowed_keys):
+    s = set(d.keys()) - set(allowed_keys)
+    return (not s)
 
 def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
     alignment_file = pysam.AlignmentFile(input_alignment_file, check_sq=False)
@@ -268,15 +269,15 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
     query_lengths_avg = query_lengths_sum / query_lengths_n if query_lengths_n else 0
     return {
         "numQueriesMapped": len (queries.keys()),
-        "numQueriesMappedOnlyAsMatch": len ([k for k in queries if is_one_element_dict(queries[k], 'true_match')]),
-        "numQueriesMappedOnlyAsSameSpecies": len ([k for k in queries if is_one_element_dict(queries[k], 'species')]),
-        "numQueriesMappedOnlyAsSameGenus": len ([k for k in queries if is_one_element_dict(queries[k], 'genus')]),
-        "numQueriesMappedOnlyAsSameFamily": len ([k for k in queries if is_one_element_dict(queries[k], 'family')]),
+        "numQueriesMappedOnlyAsMatch": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match'])]),
+        "numQueriesMappedOnlyAsSameSpecies": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species'])]),
+        "numQueriesMappedOnlyAsSameGenus": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species', 'genus'])]),
+        "numQueriesMappedOnlyAsSameFamily": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species', 'genus', 'family'])]),
         "numBuscosMapped": len (matched_buscos),
-        "numBuscosMappedOnlyAsMatch": len ([k for k in matched_buscos if is_one_element_dict(matched_buscos[k], 'true_match')]),
-        "numBuscosMappedOnlyAsSameSpecies": len ([k for k in matched_buscos if is_one_element_dict(matched_buscos[k], 'species')]),
-        "numBuscosMappedOnlyAsSameGenus": len ([k for k in matched_buscos if is_one_element_dict(matched_buscos[k], 'genus')]),
-        "numBuscosMappedOnlyAsSameFamily": len ([k for k in matched_buscos if is_one_element_dict(matched_buscos[k], 'family')]),
+        "numBuscosMappedOnlyAsMatch": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match'])]),
+        "numBuscosMappedOnlyAsSameSpecies": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match', 'species'])]),
+        "numBuscosMappedOnlyAsSameGenus": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match', 'species', 'genus'])]),
+        "numBuscosMappedOnlyAsSameFamily": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match', 'species', 'genus', 'family'])]),
         "meanIdentitiesMatchTrue": statistics.mean(identities_match_true) if identities_match_true else 0.0,
         "meanIdentitiesMatchFalse": statistics.mean(identities_match_false) if identities_match_false else 0.0,
         "mapqsAvg": mapqs_avg,

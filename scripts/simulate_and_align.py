@@ -226,20 +226,7 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
             );''')
     store.start_bulk_write()
 
-    queries = {}
-    matched_buscos = {}
-    mapqs = {}
-    query_lengths = {}
-    match_types = {}
-
-    identities_match_true = []
-    identities_match_false = []
-
-    count = 0
     for read in alignment_file.fetch():
-        count +=1
-        if count > 2000:
-            break
         query = read.query_name
         identity = compute_alignment_identity(read)
         mapq = read.mapq
@@ -249,85 +236,7 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
 
         store.do('insert into alignment_from_known_source (query,source_taxon,source_busco,matched_taxon,matched_busco,match_type,identity,mapq,query_length) values(?,?,?,?,?,?,?,?,?)', [query,source_taxon,source_busco,matched_taxon,matched_busco,match_type,identity,mapq,query_length])
 
-        if matched_busco not in matched_buscos:
-            matched_buscos[matched_busco] = {}
-
-        if match_type not in matched_buscos[matched_busco]:
-            matched_buscos[matched_busco][match_type] = 0
-
-        matched_buscos[matched_busco][match_type] += 1
-
-        if query not in queries:
-            queries[query] = {}
-        if match_type not in queries[query]:
-            queries[query][match_type] = 0
-        queries[query][match_type] += 1
-
-        if mapq not in mapqs:
-            mapqs[mapq] = 0
-        mapqs[mapq] += 1
-
-        if query_length not in query_lengths:
-            query_lengths[query_length] = 0
-        query_lengths[query_length] += 1
-
-        if match_type not in match_types:
-            match_types[match_type] = 0
-        match_types[match_type] += 1
-
-        if match_type == 'true_match':
-            identities_match_true.append(identity)
-        else:
-            identities_match_false.append(identity)
-
-
-    store.end_bulk_write()
-
-    mapqs_n = 0.0
-    mapqs_n_at_least_30 = 0.0
-    mapqs_sum = 0.0
-    if 42 not in mapqs:
-        mapqs[42] = 0
-
-    for k in mapqs:
-        mapqs_n += mapqs[k]
-        if k >= 30:
-            mapqs_n_at_least_30 += mapqs[k]
-        mapqs_sum += k * mapqs[k]
-
-    mapqs_avg = mapqs_sum / mapqs_n if mapqs_n else 0
-
-    query_lengths_n = 0.0
-    query_lengths_n_at_least_60 = 0.0
-    query_lengths_sum = 0.0
-
-    for k in query_lengths:
-        query_lengths_n += query_lengths[k]
-        if k >= 60:
-            query_lengths_n_at_least_60 += query_lengths[k]
-        query_lengths_sum += k * query_lengths[k]
-
-    query_lengths_avg = query_lengths_sum / query_lengths_n if query_lengths_n else 0
-    a = {
-        "numQueriesMapped": len (queries.keys()),
-        "numQueriesMappedOnlyAsMatch": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match'])]),
-        "numQueriesMappedOnlyAsSameSpecies": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species'])]),
-        "numQueriesMappedOnlyAsSameGenus": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species', 'genus'])]),
-        "numQueriesMappedOnlyAsSameFamily": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species', 'genus', 'family'])]),
-        "numBuscosMapped": len (matched_buscos),
-        "numBuscosMappedOnlyAsMatch": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match'])]),
-        "numBuscosMappedOnlyAsSameSpecies": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match', 'species'])]),
-        "numBuscosMappedOnlyAsSameGenus": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match', 'species', 'genus'])]),
-        "numBuscosMappedOnlyAsSameFamily": len ([k for k in matched_buscos if dict_has_at_most_the_keys(matched_buscos[k], ['true_match', 'species', 'genus', 'family'])]),
-        "meanIdentitiesMatchTrue": statistics.mean(identities_match_true) if identities_match_true else 0.0,
-        "meanIdentitiesMatchFalse": statistics.mean(identities_match_false) if identities_match_false else 0.0,
-        "mapqsAvg": mapqs_avg,
-        "mapqsFractionAtLeast30": mapqs_n_at_least_30 / mapqs_n if mapqs_n else 0,
-        "mapqsFraction42": mapqs[42] / mapqs_n if mapqs_n else 0,
-        "query_lengthsAvg": query_lengths_avg,
-        "query_lengthsFractionAtLeast60": query_lengths_n_at_least_60 / query_lengths_n if query_lengths_n else 0,
-    }
-    b = {
+    return {
         "numQueriesMapped": query_one_number(store, '''
           select count(distinct query)
             from alignment_from_known_source
@@ -505,20 +414,6 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
         '''),
 
     }
-    for key in ("numQueriesMapped", "numQueriesMappedOnlyAsMatch", "numQueriesMappedOnlyAsSameSpecies", "numQueriesMappedOnlyAsSameGenus", "numQueriesMappedOnlyAsSameFamily", "numBuscosMapped", "numBuscosMappedOnlyAsMatch", "numBuscosMappedOnlyAsSameSpecies", "numBuscosMappedOnlyAsSameGenus", "numBuscosMappedOnlyAsSameFamily", "meanIdentitiesMatchTrue", "meanIdentitiesMatchFalse","meanIdentitiesMappedOnlyAsMatch", "meanIdentitiesMappedOnlyAsSameSpecies", "meanIdentitiesMappedOnlyAsSameGenus", "meanIdentitiesMappedOnlyAsSameFamily", "meanTopIdentityPerQuery", "mapqsAvg", "mapqsFractionAtLeast30", "mapqsFraction42", "query_lengthsAvg", "query_lengthsFractionAtLeast60"):
-        if key in a and key in b and a[key] == b[key]:
-            print(key + " " + str(a[key]))
-        elif key not in a:
-            print("+ " + key + " " + str(b[key]))
-        elif key not in b:
-            print("- " + key + " " + str(a[key]))
-        else:
-            print("- " + key + " " + str(a[key]))
-            print("+ " + key + " " + str(b[key]))
-    return a
-
-
-
 
 def main(argv=sys.argv[1:]):
     parser = argparse.ArgumentParser(

@@ -8,6 +8,9 @@ import json
 import statistics
 import logging
 import subprocess
+import sqlite3
+
+from marker_alignments.store import SqliteStore
 from ete3 import NCBITaxa
 
 from pathlib import Path
@@ -187,11 +190,41 @@ def match(ncbi, marker_to_taxon, query_name, reference_name):
     return source_taxid, source_busco, matched_taxid, matched_busco, match_type
 
 def dict_has_at_most_the_keys(d, allowed_keys):
-    s = set(d.keys()) - set(allowed_keys)
-    return (not s)
+    for k in d.keys():
+        if k not in allowed_keys:
+            return False
+    return True
+
+def query_one_number(store, sql):
+    result = [ k for k in store.query(sql)]
+    if len(result) != 1:
+        raise ValueError(result, sql)
+    return result[0][0]
+
+def query_ratio(store, sql):
+    result = [ k for k in store.query(sql)]
+    if len(result) != 1:
+        raise ValueError(result, sql)
+    return 1.0 * result[0][0] / result[0][1]
 
 def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
     alignment_file = pysam.AlignmentFile(input_alignment_file, check_sq=False)
+
+    db_path = ":memory:"
+    store = SqliteStore(db_path = db_path)
+    store.connect()
+    store.do('''create table alignment_from_known_source (
+              query text not null,
+              source_taxon text not null,
+              source_busco text not null,
+              matched_taxon text not null,
+              matched_busco text not null,
+              match_type text not null,
+              identity real not null,
+              mapq real not null,
+              query_length real not null
+            );''')
+    store.start_bulk_write()
 
     queries = {}
     matched_buscos = {}
@@ -202,13 +235,19 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
     identities_match_true = []
     identities_match_false = []
 
+    count = 0
     for read in alignment_file.fetch():
+        count +=1
+        if count > 2000:
+            break
         query = read.query_name
         identity = compute_alignment_identity(read)
         mapq = read.mapq
         query_length = read.infer_query_length()
 
         source_taxon, source_busco, matched_taxon, matched_busco, match_type = match(ncbi, marker_to_taxon, query, read.reference_name)
+
+        store.do('insert into alignment_from_known_source (query,source_taxon,source_busco,matched_taxon,matched_busco,match_type,identity,mapq,query_length) values(?,?,?,?,?,?,?,?,?)', [query,source_taxon,source_busco,matched_taxon,matched_busco,match_type,identity,mapq,query_length])
 
         if matched_busco not in matched_buscos:
             matched_buscos[matched_busco] = {}
@@ -242,6 +281,8 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
             identities_match_false.append(identity)
 
 
+    store.end_bulk_write()
+
     mapqs_n = 0.0
     mapqs_n_at_least_30 = 0.0
     mapqs_sum = 0.0
@@ -267,7 +308,7 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
         query_lengths_sum += k * query_lengths[k]
 
     query_lengths_avg = query_lengths_sum / query_lengths_n if query_lengths_n else 0
-    return {
+    a = {
         "numQueriesMapped": len (queries.keys()),
         "numQueriesMappedOnlyAsMatch": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match'])]),
         "numQueriesMappedOnlyAsSameSpecies": len ([k for k in queries if dict_has_at_most_the_keys(queries[k], ['true_match', 'species'])]),
@@ -286,6 +327,195 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
         "query_lengthsAvg": query_lengths_avg,
         "query_lengthsFractionAtLeast60": query_lengths_n_at_least_60 / query_lengths_n if query_lengths_n else 0,
     }
+    b = {
+        "numQueriesMapped": query_one_number(store, '''
+          select count(distinct query)
+            from alignment_from_known_source
+        '''),
+        "numQueriesMappedOnlyAsMatch": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameSpecies": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameGenus": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameFamily": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numBuscosMapped": query_one_number(store, '''
+          select count(distinct matched_busco)
+            from alignment_from_known_source
+        '''),
+        "numBuscosMappedOnlyAsMatch": query_one_number(store, '''
+         select count(distinct matched_busco) from (
+              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select matched_busco, query, case when match_type in ('true_match') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.matched_busco, a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numBuscosMappedOnlyAsSameSpecies": query_one_number(store, '''
+         select count(distinct matched_busco) from (
+              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select matched_busco, query, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.matched_busco, a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numBuscosMappedOnlyAsSameGenus": query_one_number(store, '''
+         select count(distinct matched_busco) from (
+              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select matched_busco, query, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.matched_busco, a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numBuscosMappedOnlyAsSameFamily": query_one_number(store, '''
+         select count(distinct matched_busco) from (
+              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select matched_busco, query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.matched_busco, a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "meanIdentitiesMappedOnlyAsMatch": query_one_number(store, '''
+         select avg(identity) from (
+              select a.query, identity, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, identity, case when match_type in ('true_match') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "meanIdentitiesMappedOnlyAsSameSpecies": query_one_number(store, '''
+         select avg(identity) from (
+              select a.query, identity, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, identity, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "meanIdentitiesMappedOnlyAsSameGenus": query_one_number(store, '''
+         select avg(identity) from (
+              select a.query, identity, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, identity, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "meanIdentitiesMappedOnlyAsSameFamily": query_one_number(store, '''
+         select avg(identity) from (
+              select a.query, identity, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, identity, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "meanTopIdentityPerQuery": query_one_number(store, '''
+         select avg(top_identity) from (
+              select a.query, max(identity) as top_identity
+              from alignment_from_known_source a
+              group by a.query
+        )
+        '''),
+        "mapqsAvg": query_one_number(store, '''
+         select avg(mapq) from alignment_from_known_source a
+        '''),
+        "mapqsFractionAtLeast30": query_ratio(store, '''
+          select sum(c) as numerator, count(c) as deliminator
+            from (
+                select case when mapq > 30 then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+        '''),
+        "mapqsFraction42": query_ratio(store, '''
+          select sum(c) as numerator, count(c) as deliminator
+            from (
+                select case when mapq >= 42 then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+        '''),
+        "query_lengthsAvg": query_one_number(store, '''
+          select avg(query_length)
+            from alignment_from_known_source
+        '''),
+        "query_lengthsFractionAtLeast60": query_ratio(store, '''
+          select sum(c) as numerator, count(c) as deliminator
+            from (
+                select case when query_length >= 60 then 1 else 0 end as c
+                from alignment_from_known_source
+              ) a
+        '''),
+
+    }
+    for key in ("numQueriesMapped", "numQueriesMappedOnlyAsMatch", "numQueriesMappedOnlyAsSameSpecies", "numQueriesMappedOnlyAsSameGenus", "numQueriesMappedOnlyAsSameFamily", "numBuscosMapped", "numBuscosMappedOnlyAsMatch", "numBuscosMappedOnlyAsSameSpecies", "numBuscosMappedOnlyAsSameGenus", "numBuscosMappedOnlyAsSameFamily", "meanIdentitiesMatchTrue", "meanIdentitiesMatchFalse","meanIdentitiesMappedOnlyAsMatch", "meanIdentitiesMappedOnlyAsSameSpecies", "meanIdentitiesMappedOnlyAsSameGenus", "meanIdentitiesMappedOnlyAsSameFamily", "meanTopIdentityPerQuery", "mapqsAvg", "mapqsFractionAtLeast30", "mapqsFraction42", "query_lengthsAvg", "query_lengthsFractionAtLeast60"):
+        if key in a and key in b and a[key] == b[key]:
+            print(key + " " + str(a[key]))
+        elif key not in a:
+            print("+ " + key + " " + str(b[key]))
+        elif key not in b:
+            print("- " + key + " " + str(a[key]))
+        else:
+            print("- " + key + " " + str(a[key]))
+            print("+ " + key + " " + str(b[key]))
+    return a
 
 
 

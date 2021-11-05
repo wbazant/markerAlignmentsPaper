@@ -78,10 +78,11 @@ def do_one(ncbi, marker_to_taxon, read_length, base_error_rate, mutation_rate, w
         subprocess.run(["mv", "-v", sam_path + ".tmp", sam_path])
 
     summary_path= f"{wd}/{prefix}.summary.json"
+    db_path= f"{wd}/{prefix}.alignments.sqlite"
 
     if not os.path.isfile(summary_path):
         logger.info("Summarizing " + " ".join([sam_path, sim_path_1]))
-        summary = summarize_sim_alignment(ncbi, marker_to_taxon, sam_path)
+        summary = summarize_sim_alignment(ncbi, marker_to_taxon, sam_path, db_path)
         grep_cmd = ['grep', '-c', '^@', sim_path_1]
         logger.info("Running: " + " ".join(grep_cmd))
         summary["numQueriesTotal"] = int(subprocess.run(grep_cmd, stdout = subprocess.PIPE).stdout.decode(encoding="utf-8").replace("\n", ""))
@@ -136,7 +137,6 @@ def get_match_type(ncbi, source_taxid, matched_taxid):
             raise ValueError(lineage, ranks)
         result = ranks_increasing[0]
 
-
     match_type_cache[k] = result
     return result
 
@@ -178,6 +178,8 @@ def match(ncbi, marker_to_taxon, query_name, reference_name):
 
     if is_match:
         match_type = 'true_match'
+    elif source_taxid == matched_taxid:
+        match_type = 'species'
     else:
         match_type = get_match_type(ncbi, source_taxid, matched_taxid)
 
@@ -188,12 +190,6 @@ def match(ncbi, marker_to_taxon, query_name, reference_name):
 
 
     return source_taxid, source_busco, matched_taxid, matched_busco, match_type
-
-def dict_has_at_most_the_keys(d, allowed_keys):
-    for k in d.keys():
-        if k not in allowed_keys:
-            return False
-    return True
 
 def query_one_number(store, sql):
     result = [ k for k in store.query(sql)]
@@ -207,10 +203,11 @@ def query_ratio(store, sql):
         raise ValueError(result, sql)
     return 1.0 * result[0][0] / result[0][1]
 
-def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file):
+def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file, db_path):
+    if os.path.exists(db_path):
+        os.remove(db_path)
     alignment_file = pysam.AlignmentFile(input_alignment_file, check_sq=False)
 
-    db_path = ":memory:"
     store = SqliteStore(db_path = db_path)
     store.connect()
     store.do('''create table alignment_from_known_source (

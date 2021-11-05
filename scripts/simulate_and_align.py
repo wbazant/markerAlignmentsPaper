@@ -77,19 +77,24 @@ def do_one(ncbi, marker_to_taxon, read_length, base_error_rate, mutation_rate, w
             subprocess.run(sam_cmd, check=True, stdout = f, stderr = sys.stderr)
         subprocess.run(["mv", "-v", sam_path + ".tmp", sam_path])
 
-    summary_path= f"{wd}/{prefix}.summary.json"
     db_path= f"{wd}/{prefix}.alignments.sqlite"
 
+    if not os.path.isfile(db_path):
+        logger.info("Populating store " + " ".join([sam_path, db_path]))
+        store = write_sim_alignment_to_store(ncbi, marker_to_taxon, sam_path, db_path)
+    else:
+        store = SqliteStore(db_path = db_path)
+        store.connect()
+    
+    summary_path= f"{wd}/{prefix}.summary.json"
     if not os.path.isfile(summary_path):
-        logger.info("Summarizing " + " ".join([sam_path, sim_path_1]))
-        summary = summarize_sim_alignment(ncbi, marker_to_taxon, sam_path, db_path)
+        logger.info("Summarizing " + " ".join([db_path, sim_path_1]))
+        summary = stats_from_store(store)
         grep_cmd = ['grep', '-c', '^@', sim_path_1]
         logger.info("Running: " + " ".join(grep_cmd))
         summary["numQueriesTotal"] = int(subprocess.run(grep_cmd, stdout = subprocess.PIPE).stdout.decode(encoding="utf-8").replace("\n", ""))
-        grep_cmd_2 = [
-            'grep', '-o', '^@.*at2759', sim_path_1, '|', "uniq", '|', "wc", "-l" ]
-        logger.info("Running: " + " ".join(grep_cmd_2))
-        summary["numBuscosTotal"] = int(subprocess.run([" ".join(grep_cmd_2)], shell = True, stdout = subprocess.PIPE).stdout.decode(encoding="utf-8").replace("\n", ""))
+
+        summary["numBuscosTotal"] = count_buscos_in_sim_fastq(sim_path_1)
         summary["precisionQueries"] = 1.0 * summary["numQueriesMappedOnlyAsMatch"] / summary["numQueriesMapped"]
         summary["precisionBuscos"] = 1.0 * summary["numBuscosMappedOnlyAsMatch"] / summary["numBuscosMapped"]
         summary["recallQueries"] = 1.0 * summary["numQueriesMappedOnlyAsMatch"] / summary["numQueriesTotal"]
@@ -113,8 +118,26 @@ pattern_taxon = re.compile(eukprot_refdb_regex_taxon)
 pattern_marker = re.compile(eukprot_refdb_regex_marker)
 pattern_busco = re.compile(eukprot_refdb_regex_busco)
 
+
 def next_g(search):
     return next(g for g in search.groups() if g is not None)
+
+def count_buscos_in_sim_fastq(sim_path):
+    result = set()
+    with open(sim_path, 'r') as f:
+        while True:
+            l = f.readline()
+            if not l:
+                break
+            if l.startswith("@"):
+                l = re.sub("^@", "", l)
+                search = pattern_busco.search(l)
+                if not search:
+                    raise ValueError(l)
+                busco = next_g(search)
+                result.add(busco)
+    return len(result)
+
 
 trad_ranks = {"superkingdom", "kingdom", "phylum", "class", "order", "family", "genus", "species"}
 
@@ -203,9 +226,7 @@ def query_ratio(store, sql):
         raise ValueError(result, sql)
     return 1.0 * result[0][0] / result[0][1]
 
-def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file, db_path):
-    if os.path.exists(db_path):
-        os.remove(db_path)
+def write_sim_alignment_to_store(ncbi, marker_to_taxon, input_alignment_file, db_path):
     alignment_file = pysam.AlignmentFile(input_alignment_file, check_sq=False)
 
     store = SqliteStore(db_path = db_path)
@@ -233,6 +254,10 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file, db_path
 
         store.do('insert into alignment_from_known_source (query,source_taxon,source_busco,matched_taxon,matched_busco,match_type,identity,mapq,query_length) values(?,?,?,?,?,?,?,?,?)', [query,source_taxon,source_busco,matched_taxon,matched_busco,match_type,identity,mapq,query_length])
 
+    store.end_bulk_write()
+    return store
+
+def stats_from_store(store):
     return {
         "numQueriesMapped": query_one_number(store, '''
           select count(distinct query)
@@ -283,50 +308,50 @@ def summarize_sim_alignment(ncbi, marker_to_taxon, input_alignment_file, db_path
         )
         '''),
         "numBuscosMapped": query_one_number(store, '''
-          select count(distinct matched_busco)
+          select count(distinct source_busco)
             from alignment_from_known_source
         '''),
         "numBuscosMappedOnlyAsMatch": query_one_number(store, '''
-         select count(distinct matched_busco) from (
-              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+         select count(distinct source_busco) from (
+              select a.source_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
               from (
-                select matched_busco, query, case when match_type in ('true_match') then 1 else 0 end as c
+                select source_busco, query, case when match_type in ('true_match') then 1 else 0 end as c
                 from alignment_from_known_source
               ) a
-              group by a.matched_busco, a.query
+              group by a.source_busco, a.query
               having allowed_matches = all_matches
         )
         '''),
         "numBuscosMappedOnlyAsSameSpecies": query_one_number(store, '''
-         select count(distinct matched_busco) from (
-              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+         select count(distinct source_busco) from (
+              select a.source_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
               from (
-                select matched_busco, query, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+                select source_busco, query, case when match_type in ('true_match', 'species') then 1 else 0 end as c
                 from alignment_from_known_source
               ) a
-              group by a.matched_busco, a.query
+              group by a.source_busco, a.query
               having allowed_matches = all_matches
         )
         '''),
         "numBuscosMappedOnlyAsSameGenus": query_one_number(store, '''
-         select count(distinct matched_busco) from (
-              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+         select count(distinct source_busco) from (
+              select a.source_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
               from (
-                select matched_busco, query, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
+                select source_busco, query, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
                 from alignment_from_known_source
               ) a
-              group by a.matched_busco, a.query
+              group by a.source_busco, a.query
               having allowed_matches = all_matches
         )
         '''),
         "numBuscosMappedOnlyAsSameFamily": query_one_number(store, '''
-         select count(distinct matched_busco) from (
-              select a.matched_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
+         select count(distinct source_busco) from (
+              select a.source_busco, a.query, sum(c) as allowed_matches, count(c) as all_matches
               from (
-                select matched_busco, query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
+                select source_busco, query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
                 from alignment_from_known_source
               ) a
-              group by a.matched_busco, a.query
+              group by a.source_busco, a.query
               having allowed_matches = all_matches
         )
         '''),

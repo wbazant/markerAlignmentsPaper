@@ -75,7 +75,7 @@ def do_one(ncbi, marker_to_taxon, read_length, base_error_rate, mutation_rate, w
         logger.info("Running: " + " ".join(sam_cmd))
         with open(sam_path + ".tmp", 'w') as f:
             subprocess.run(sam_cmd, check=True, stdout = f, stderr = sys.stderr)
-        subprocess.run(["mv", "-v", sam_path + ".tmp", sam_path])
+        subprocess.run(["mv", sam_path + ".tmp", sam_path])
 
     db_path= f"{wd}/{prefix}.alignments.sqlite"
 

@@ -152,21 +152,41 @@ We see that the fraction of reads passing through EukDetect's MAPQ filter drops 
 
 ![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
 
+\newpage
+
 Precision (a proportion of correctly mapping reads among the reads that map to any reference) stays between 95% and 96% throughout the range of values. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
+
+We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to a correct taxonomic unit, or at least the same genus or family.
+
+![wgsim mutation rate - bars showing the precision is high](figures/bars.png)
 
 We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model.
 
+All the data that was generated in the simulation is [here](supplement/wgsim.tsv).
+
 \newpage
+
 ### Novel species - low MAPQ, recall
 
 We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
 
-We find a third of such reads still aligns, 316 / 371 organisms have some reads that map to something else. Some organisms map all over, but they mostly show up as a mixture of species in the same genus. MAPQ is overwhelmingly near zero.
+![wgsim mutation rate - mapq low, nothing counts as "correctly mapped"](figures/leaveOneOut.png)
 
 \newpage
+
+The precision is still high:
+
+![wgsim mutation rate - bars showing the precision is high](figures/barsLeaveOneOut.png)
+
+All the data for "leave one out" with a few mutation rates added is [here](supplement/wgsimLeaveOneOut.tsv).
+
+\newpage
+
 ### Errors favour closely related species
 
-We have no data to argue this, only a theoretical model presented by these two diagrams:
+Most errors are near misses in the mutated reads example, and the "take one out" scheme still mostly works on the genus level. This is what we have to support the case that errors favour closely related species.
+
+We also have a theoretical model presented by these two diagrams:
 
 
 Diagram 1a. With X' and X'' differing from X only by aggregated single-nucleotide changes, reads preferentially map to the closer X'. MAPQ and percentage identity get lower, but the information in the reads is sufficient to report the nearest taxon.

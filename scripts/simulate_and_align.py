@@ -307,6 +307,54 @@ def stats_from_store(store):
               having allowed_matches = all_matches
         )
         '''),
+        "numQueriesMappedWhenMapqAtLeast30": query_one_number(store, '''
+          select count(distinct query)
+            from alignment_from_known_source where mapq >=30
+        '''),
+        "numQueriesMappedOnlyAsMatchWhenMapqAtLeast30": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=30
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameSpeciesWhenMapqAtLeast30": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=30
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameGenusWhenMapqAtLeast30": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=30
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameFamilyWhenMapqAtLeast30": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=30
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
         "numBuscosMapped": query_one_number(store, '''
           select count(distinct source_busco)
             from alignment_from_known_source

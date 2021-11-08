@@ -156,9 +156,9 @@ We see that the fraction of reads passing through EukDetect's MAPQ filter drops 
 
 Precision (a proportion of correctly mapping reads among the reads that map to any reference) stays between 95% and 96% throughout the range of values. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
 
-We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to a correct taxonomic unit, or at least the same genus or family.
+We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to a correct taxonomic unit, or at least the same genus or family. Adding the MAPQ filter improves precision yet further, at a cost of accuracy - in the simulation, incorrectly mapping reads are more likely to do so with MAPQ below 30.
 
-![wgsim mutation rate - bars showing the precision is high](figures/bars.png)
+![wgsim mutation rate - the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/bars.png)
 
 We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model.
 
@@ -176,9 +176,9 @@ We investigate the effect of larger gaps in the reference by taking every tenth 
 
 The precision is still high:
 
-![wgsim mutation rate - bars showing the precision is high](figures/barsLeaveOneOut.png)
+![wgsim mutation rate - bars showing the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/barsLeaveOneOut.png)
 
-All the data for "leave one out" with a few mutation rates added is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
+All the data for the "leave one out" variant of the simulation is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
 
 \newpage
 

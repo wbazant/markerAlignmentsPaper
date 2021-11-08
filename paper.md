@@ -156,7 +156,9 @@ We see that the fraction of reads passing through EukDetect's MAPQ filter drops 
 
 Precision (a proportion of correctly mapping reads among the reads that map to any reference) stays between 95% and 96% throughout the range of values. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
 
-We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to a correct taxonomic unit, or at least the same genus or family. Adding the MAPQ filter improves precision yet further, at a cost of accuracy - in the simulation, incorrectly mapping reads are more likely to do so with MAPQ below 30.
+We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to a correct taxonomic unit, or at least the same genus or family.
+
+Adding the MAPQ filter improves the precision to between 99.6% and 99.9%, at a cost of accuracy: incorrectly mapping reads are more likely to do so with MAPQ below 30 but many correctly mapping reads also have MAPQ below 30.
 
 ![wgsim mutation rate - the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/bars.png)
 
@@ -174,7 +176,7 @@ We investigate the effect of larger gaps in the reference by taking every tenth 
 
 \newpage
 
-The precision is still high:
+The precision is around 80% per query when we limit ourselves to identifying reads down to the correct genus. Adding the MAPQ filter doesn't improve precision, but vastly decreases recall.
 
 ![wgsim mutation rate - bars showing the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/barsLeaveOneOut.png)
 

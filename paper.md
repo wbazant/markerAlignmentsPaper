@@ -162,7 +162,7 @@ We see that mutated reads, even as they get aligned less frequently, overwhelmin
 
 We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model.
 
-All the data that was generated in the simulation is [here](supplement/wgsim.tsv).
+All the data that was generated in the simulation is [in the supplement](supplement/wgsim.tsv).
 
 \newpage
 
@@ -178,7 +178,7 @@ The precision is still high:
 
 ![wgsim mutation rate - bars showing the precision is high](figures/barsLeaveOneOut.png)
 
-All the data for "leave one out" with a few mutation rates added is [here](supplement/wgsimLeaveOneOut.tsv).
+All the data for "leave one out" with a few mutation rates added is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
 
 \newpage
 

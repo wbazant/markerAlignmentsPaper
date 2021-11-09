@@ -2,169 +2,56 @@
 by Wojtek, Kathryn, Dan, possibly others
 
 # Introduction
-
-```
-to do:
-This claims that reference bias is a problem in read mapping, and particularly for eukaryotes
-
-It's a working theory at best
-add citations / context or get rid of it
-```
-
-Methods of quantifying taxa in metagenomic samples that based on read mapping suffer from reference bias. 
-
-
-Mechanisms of variation are different between prokaryotes and eukaryotes. Bacteria lose whole genes and functions, but also gain them through recombination. Eukaryotic genes have introns, so the tweaking is more gradual, and small differences in sequence lead to very different phenotypes.
-
-In eukaryotes, mapping reads for an organism that is only broadly characterized in the reference (a different strain or species) results in reference bias. The organism might be skipped, or reported as a mixture of a closely related species.
-
-We show reference bias can be mitigated by incorporating secondary alignments as evidence against some taxa being present. We show this increases sensitivity when mapping to a EukDetect reference of BUSCOs and replacing the MAPQ filter. We also show we can identify off-target hits in the output of CCMetagen.
-
-
-# Background
-```
-to do:
-these are loose notes about things I've heard about
-
-explain how our new thing is new in relation to those things
-```
-
-## Reference bias
-
-
-
-
-
-
-## Quantifying Eukaryotes is hard
-
-
-1. Euk genomes are widely contaminated [@lind2021accurate] so bacterial reads match to them spontaneously.
-
-2. The level of noise is high enough that reads to e.g. fungal sequences completely fail.
-[The use of taxon-specific reference databases compromises metagenomic classification](https://pubmed.ncbi.nlm.nih.gov/32106809/)
-
-3. The Euk genomes are larger and differ from each other by less
-
-4. The references are quite spotty: there's like a thousand assemblies, 148,000 described, 2-3 mln estimated https://en.wikipedia.org/wiki/Fungus.
-
-5. Telling apart multiple species in the sample: an inexact match to a reference looks like a mixture of related species
-
-## Current tools
-
-Finding taxa in a metegenomic sample can be achieved by mapping reads to a reference database. K-mer methods (Kraken) and de novo assembly (anvio) are possible alternatives to read mapping.
-
-Out of K-mer methods, CCMetagen[@marcelino2020ccmetagen] stands out as an alternative new tool developed for genomic epidemiology use. It is based on a specialised aligner KMA[@clausen2018rapid] that handles redundant databases, so it can use all possible genomes as its reference. Further it does reference-guided assembly on the reads, and assigns each sequence a separate match. Unfortunately it does not attempt to provide a list of species in the sample, but rather, a summary of naturally redundant KMA results into taxonomic units.
-
-Metaphlan is the most established tool for running `bowtie2` on a reference of marker genes. Massive reference, [~1.1M unique clade-specific marker genes identified from ~100k reference genomes (~99,500 bacterial and archaeal and ~500 eukaryotic)](https://github.com/biobakery/biobakery/wiki/metaphlan3).
-
-[Kaiju](https://kaiju.binf.ku.dk/) uses protein alignments, trying to get higher sensitivity.
-
-
-EukDetect achieves sensistivity through aligning to a reference of Eukaryotic BUSCOs and heavy filtering. The possibly-ambiguous reads are assigned low MAPQ scores.
-
-
-
-# Conclusion
-
-```
-to do:
-this tries to explain why what I did is good and clever
-
-use it to structure further work
-```
-
-
-Our contributions are:
-
-- an explanation of how off-target hits happen, which helps authors of tools that interpret read mapping as counts of taxa
-- software that runs and interprets alignments to EukDetect's reference database, and possibly to other reference databases, which helps people who have metagenomic data and need to analyse in taxa present
-- the analysis of MicrobiomeDB data, which helps people who want to know what eukaryotes are present in human microbiomes
-
-
-
-We've not yet contributed, but could contribute:
-
-- a better way of integrating multiple results for a taxon
-- software for building references that will work well with our method, which would help bioinformaticians in setting up analyses like ours
-- a reference for traces of animal DNA, which would help people who study samples where they might be present
-- an analysis of host blood meals of a mosquito dataset, which would help epidemiologists and people who want to know what different mosquitoes feed on
-
-
-
-We've had ideas about:
-
-- using this work to detect anti-microbial resistance genes (is there a universal database of known AMR variants of genes?) 
-
-
-
-Our method is new because:
-
-- nobody else interprets low MAPQ reads as a good alignment in the wrong place
-- nobody else interprets secondary alignments as evidence against taxon being present
-- nobody else uses network methods
-
-
-Our method is good because:
-
-- the method works at very low abundances, it's even better at it than EukDetect
-- the method reports mixtures of related species more sensitively than EukDetect
-- the method does not skip, or bias counts against, species that only approximately match the reference
-
-Our method would be even better if:
-
-- the method modelled the gap between reference and signal
-  + reporting it could be interesting
-  + one clear filter for taxa could be more accurate than a few sequential ones
-  + an explanation how the gap between reference and signal looks in read mapping results when they're summarized by taxon
+\newpage
 
 # Methodology and results
 
-
 ## EukDetect has a reference bias
 ```
-to do:
-This shows that EukDetect has a reference bias
-
-It doesn't say why having reference bias is bad
-
-Discuss the simulation results - what do I report to make it more convincing
-
-Discuss the diagrams? I want to demonstrate low MAPQ and off-target hits
-
+I guess the quick cross-validation could also go in the introduction
 ```
 
-Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs, and use `bowtie2` [@langmead2012fast] to align them back to the reference.
+Potential dissimilarity of a sequenced material to any previously known reference is a challenging aspect of identifying reads in an environmental sample, and [@r2020use] demonstrates the perils of an incomplete reference combined with an overly optimistic prediction method.
 
-In the SAM specification [http://samtools.github.io/hts-specs/SAMv1.pdf] the MAPQ field is defined as a measure of mapping quality - certainty of where the read should be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample.
+EukDetect demonstrates that a specially prepared reference of sequences only typically present in eukaryotes can exclude spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication [@lind2021accurate], and a quick cross-validation reveals that the tool is not really prepared to deal with it.
 
-We show that EukDetect's MAPQ >= 30 filter is unnecessarily restrictive towards novel strains, and precludes an otherwise feasible identification of a novel species to its genus.
+We remove 371 species from one-tenth of the reference, simulate a million reads, rebuild the index with the rest of the reference, and run EukDetect with default parameters. The tool reports a filtered list of different 145 species at varying levels of presence, and a larger one of 445 total.
 
+There are many eukaryotes, especially fungi, and only some of them have been sequenced (TODO detail?). We analyse how a reference gap looks like in the results, identify some problems, and propose a method based on EukDetect that doesn't have the problems.
 
 \newpage
 
 
-### Novel strains - MAPQ drops before recall drops
-We sample reads from the reference running `wgsim` with mutation rate in a range of values between 0.0 and 0.2, base error rate set to zero, and other parameters default to investigate the effect of a sequenced species being of a different genotype / strain than the reference.
+### Novel strains
 
-We see that the fraction of reads passing through EukDetect's MAPQ filter drops rapidly as mutation rate increases, while recall (a fraction of reads that map back to the BUSCO they were sampled from) is much more robust:
+Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs, and use `bowtie2` [@langmead2012fast] to align them back to the reference.
+
+First we investigate the effect of a sequenced species being of a different genotype or strain than the reference.
+
+We sample reads from the reference running `wgsim` with mutation rate in a range of values between 0.0 and 0.2, read length set to 100, base error rate set to zero, and other parameters set to their default values. The information on the amount of reads before and after alignment, as well as which BUSCO each read was sampled from, lets us compute a number of statistics about the results, including precision ( a proportion of correctly mapping reads among the reads that map to any reference ), recall ( a proportion of sampled reads that correctly map), their variants where a goal is relaxed to only require mapping to the correct genus or family, and the values these metrics would take if the alignment results got filtered.
+
+Our main result is confirmation of general validity of read mapping when applied to sequences that might exhibit this kind of difference. We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to the taxonomic unit they were sampled from - precision stays between 95% and 96% throughout the range of mutation rates, and same-genus precision is between 99.5% and 99.6%. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
+
+Average match identity of reported alignments decreases as reflecting the mutations introduced, and average MAPQ drops to zero.
+
+In the SAM specification [@li2009sequence] the MAPQ field was defined as a measure of mapping quality - certainty of where the read should be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample.
+
+We see in Figures 1 and 2 that adding the MAPQ filter improves the precision to between 99.6% and 99.9%, at the cost of making recall much less robust.
+
 
 
 ![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
 
+
 \newpage
-
-Precision (a proportion of correctly mapping reads among the reads that map to any reference) stays between 95% and 96% throughout the range of values. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
-
-We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to a correct taxonomic unit, or at least the same genus or family.
-
-Adding the MAPQ filter improves the precision to between 99.6% and 99.9%, at a cost of accuracy: incorrectly mapping reads are more likely to do so with MAPQ below 30 but many correctly mapping reads also have MAPQ below 30.
 
 ![wgsim mutation rate - the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/bars.png)
 
-We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model.
+\newpage
 
-All the data that was generated in the simulation is [in the supplement](supplement/wgsim.tsv).
+In our interpretation `bowtie2` is able to correctly place a read to the nearest reference species even when differences between source taxon and reference are quite large, but it becomes less sure where exactly to align such reads. Most mistakes are near misses, and the MAPQ filter may not always be appropriate.
+
+We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model. All the data that was generated in the simulation is [in the supplement](supplement/wgsim.tsv).
 
 \newpage
 
@@ -176,19 +63,28 @@ We investigate the effect of larger gaps in the reference by taking every tenth 
 
 \newpage
 
-The precision is around 80% per query when we limit ourselves to identifying reads down to the correct genus. Adding the MAPQ filter doesn't improve precision, but vastly decreases recall.
+The main result is that read mapping mostly works when mapping sequences from an unknown species: same-genus precision is 82%, same-family precision is 95%, same-genus recall is 30%, and same-family recall is 35%. Adding the MAPQ filter doesn't improve precision, but vastly decreases recall.
 
 ![wgsim mutation rate - bars showing the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/barsLeaveOneOut.png)
+
 
 All the data for the "leave one out" variant of the simulation is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
 
 \newpage
 
-### Errors favour closely related species
+## Network stuff 
+```
+todo this is not yet coherent
+```
 
-Most errors are near misses in the mutated reads example, and the "take one out" scheme still mostly works on the genus level. This is what we have to support the case that errors favour closely related species.
+EukDetect introduces a concept of primary and secondary hits: a taxon with the most matching reads is considered a primary taxon for its genus, and a more stringent burden of evidence is placed on any other (secondary) results in the same genus.
 
-We also have a theoretical model presented by these two diagrams:
+It works well when simulating mixtures of species at even low coverage, but fails to account for an unknown species present at a relatively high coverage - see the quick cross-validation result at the top.
+
+We believe that off-target alignments need a more nuanced treatment.
+
+### Diagram
+We have a theoretical model presented by these two diagrams:
 
 
 Diagram 1a. With X' and X'' differing from X only by aggregated single-nucleotide changes, reads preferentially map to the closer X'. MAPQ and percentage identity get lower, but the information in the reads is sufficient to report the nearest taxon.
@@ -208,6 +104,31 @@ Diagram 1b. If X' misses some of the sequence, some reads map to X'' instead.
 ```
 
 \pagebreak
+
+
+### Measuring network structure
+
+Some markers get confused with each other more often than others, specifically, an off-target hit is likely to be a hit to a related protein from a closely related organism. This is a basis of EukDetect's `eukdetect/count_primary_and_secondary.py` program, which uses a partition of markers based on their taxonomic origin.
+
+EukDetect's method corresponds to an error model where all equivalently annotated BUSCOs in genus level are considered confusable enough to require the more stringent cutoffs, and off-target hits on differently annotated BUSCOs or in different families are considered insignificant enough to be removed by other filters.
+
+We can compare how well this partition captures markers in each simulated result by using the modularity formula:
+
+```
+Q = fraction of edges within clusters / fraction of edges between clusters
+```
+
+applied to a graph where each node is a marker and each edge weight is a count of mis-classifications.
+
+We can also compute partitions using the MCL algorithm frequently deployed in bioinformatics in the context of sequence match, as well as the Leiden algorithm, a general-purpose tool for community detection.
+
+Here are the results: TODO :).
+
+As we see (TODO) the performance of the per-genus partition varies based on error rate introduced to the reads, and is not as good as an optimal partition calculated using the ground truth information.
+
+We do not need an a-priori list of markers that might get confused with each other: it can be observed by setting the aligner to report all alignments per query, and using counts of shared alignments as edge weights between markers, then running the same algorithms as before.
+
+It depends on coverage, but here are some results: TODO.
 
 
 ## Summary of our method
@@ -380,6 +301,123 @@ The above does not show that, but we are able to show that the presence of addit
 I've written these sections but they're not really useful. They might be good for talking about the stuff internally.
 
 \newpage
+
+# Introduction
+
+```
+to do:
+This claims that reference bias is a problem in read mapping, and particularly for eukaryotes
+
+It's a working theory at best
+add citations / context or get rid of it
+```
+
+Methods of quantifying taxa in metagenomic samples that based on read mapping suffer from reference bias. 
+
+
+Mechanisms of variation are different between prokaryotes and eukaryotes. Bacteria lose whole genes and functions, but also gain them through recombination. Eukaryotic genes have introns, so the tweaking is more gradual, and small differences in sequence lead to very different phenotypes.
+
+In eukaryotes, mapping reads for an organism that is only broadly characterized in the reference (a different strain or species) results in reference bias. The organism might be skipped, or reported as a mixture of a closely related species.
+
+We show reference bias can be mitigated by incorporating secondary alignments as evidence against some taxa being present. We show this increases sensitivity when mapping to a EukDetect reference of BUSCOs and replacing the MAPQ filter. We also show we can identify off-target hits in the output of CCMetagen.
+
+
+# Background
+```
+to do:
+these are loose notes about things I've heard about
+
+explain how our new thing is new in relation to those things
+```
+
+## Reference bias
+
+
+
+
+
+
+## Quantifying Eukaryotes is hard
+
+
+1. Euk genomes are widely contaminated [@lind2021accurate] so bacterial reads match to them spontaneously.
+
+2. The level of noise is high enough that reads to e.g. fungal sequences completely fail.
+[The use of taxon-specific reference databases compromises metagenomic classification](https://pubmed.ncbi.nlm.nih.gov/32106809/)
+
+3. The Euk genomes are larger and differ from each other by less
+
+4. The references are quite spotty: there's like a thousand assemblies, 148,000 described, 2-3 mln estimated https://en.wikipedia.org/wiki/Fungus.
+
+5. Telling apart multiple species in the sample: an inexact match to a reference looks like a mixture of related species
+
+## Current tools
+
+Finding taxa in a metegenomic sample can be achieved by mapping reads to a reference database. K-mer methods (Kraken) and de novo assembly (anvio) are possible alternatives to read mapping.
+
+Out of K-mer methods, CCMetagen[@marcelino2020ccmetagen] stands out as an alternative new tool developed for genomic epidemiology use. It is based on a specialised aligner KMA[@clausen2018rapid] that handles redundant databases, so it can use all possible genomes as its reference. Further it does reference-guided assembly on the reads, and assigns each sequence a separate match. Unfortunately it does not attempt to provide a list of species in the sample, but rather, a summary of naturally redundant KMA results into taxonomic units.
+
+Metaphlan is the most established tool for running `bowtie2` on a reference of marker genes. Massive reference, [~1.1M unique clade-specific marker genes identified from ~100k reference genomes (~99,500 bacterial and archaeal and ~500 eukaryotic)](https://github.com/biobakery/biobakery/wiki/metaphlan3).
+
+[Kaiju](https://kaiju.binf.ku.dk/) uses protein alignments, trying to get higher sensitivity.
+
+
+EukDetect achieves sensistivity through aligning to a reference of Eukaryotic BUSCOs and heavy filtering. The possibly-ambiguous reads are assigned low MAPQ scores.
+
+
+
+# Conclusion
+
+```
+to do:
+this tries to explain why what I did is good and clever
+
+use it to structure further work
+```
+
+
+Our contributions are:
+
+- an explanation of how off-target hits happen, which helps authors of tools that interpret read mapping as counts of taxa
+- software that runs and interprets alignments to EukDetect's reference database, and possibly to other reference databases, which helps people who have metagenomic data and need to analyse in taxa present
+- the analysis of MicrobiomeDB data, which helps people who want to know what eukaryotes are present in human microbiomes
+
+
+
+We've not yet contributed, but could contribute:
+
+- a better way of integrating multiple results for a taxon
+- software for building references that will work well with our method, which would help bioinformaticians in setting up analyses like ours
+- a reference for traces of animal DNA, which would help people who study samples where they might be present
+- an analysis of host blood meals of a mosquito dataset, which would help epidemiologists and people who want to know what different mosquitoes feed on
+
+
+
+We've had ideas about:
+
+- using this work to detect anti-microbial resistance genes (is there a universal database of known AMR variants of genes?) 
+
+
+
+Our method is new because:
+
+- nobody else interprets low MAPQ reads as a good alignment in the wrong place
+- nobody else interprets secondary alignments as evidence against taxon being present
+- nobody else uses network methods
+
+
+Our method is good because:
+
+- the method works at very low abundances, it's even better at it than EukDetect
+- the method reports mixtures of related species more sensitively than EukDetect
+- the method does not skip, or bias counts against, species that only approximately match the reference
+
+Our method would be even better if:
+
+- the method modelled the gap between reference and signal
+  + reporting it could be interesting
+  + one clear filter for taxa could be more accurate than a few sequential ones
+  + an explanation how the gap between reference and signal looks in read mapping results when they're summarized by taxon
 
 ## Definitions
 

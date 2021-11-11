@@ -41,6 +41,9 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 	mkdir -pv figures
 	python3 scripts/plot_bars.py --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-png figures/barsLeaveOneOut.png 
 
+figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
+	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite
+
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
 	mkdir -pv supplement
 	python3 scripts/wgsim_to_tsv.py  --input-json tmp/wgsimMutationRate.json --output-tsv supplement/wgsim.tsv
@@ -49,5 +52,5 @@ supplement/wgsimLeaveOneOut.tsv: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.jso
 	mkdir -pv supplement
 	python3 scripts/wgsim_to_tsv.py  --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-tsv supplement/wgsimLeaveOneOut.tsv
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

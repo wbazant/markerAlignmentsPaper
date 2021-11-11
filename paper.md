@@ -17,6 +17,7 @@ EukDetect demonstrates that a specially prepared reference of sequences only typ
 
 We remove 371 species from one-tenth of the reference, simulate a million reads, rebuild the index with the rest of the reference, and run EukDetect with default parameters. The tool reports a filtered list of different 145 species at varying levels of presence, and a larger one of 445 total.
 
+
 There are many eukaryotes, especially fungi, and only some of them have been sequenced (TODO detail?). We analyse how a reference gap looks like in the results, identify some problems, and propose a method based on EukDetect that doesn't have the problems.
 
 \newpage
@@ -51,11 +52,13 @@ We see in Figures 1 and 2 that adding the MAPQ filter improves the precision to 
 
 In our interpretation `bowtie2` is able to correctly place a read to the nearest reference species even when differences between source taxon and reference are quite large, but it becomes less sure where exactly to align such reads. Most mistakes are near misses, and the MAPQ filter may not always be appropriate.
 
+The MAPQ >=30 filter is crucial to mapping reads with high precision, but it decreases recall and does not aid in approximate identification of novel species. 
+
 We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model. All the data that was generated in the simulation is [in the supplement](supplement/wgsim.tsv).
 
 \newpage
 
-### Novel species - low MAPQ, recall
+### Novel species
 
 We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
 
@@ -71,11 +74,29 @@ The main result is that read mapping mostly works when mapping sequences from an
 All the data for the "leave one out" variant of the simulation is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
 
 \newpage
+## Information about mismatches
+
+EukDetect introduces an element of anticipating potential mismatches - for each genus, a taxon with the most matching reads and greatest coverage is considered the primary for its genus, and a more stringent burden of evidence is placed on any other results in the same genus. It is shown that together with a filter of minimum read count, the method can distinguish a true mixture from off-target hits when simulating reads from two closely related species of <i>Entamoeba</i> at a wide ranges of coverage.
+
+Our simulations show that the difficulty of distinguishing species from each other might be highly variable. 
+
+For each taxon, we count reads sampled from the sequences of that taxon that align back to it, compare it to the count of sequences sampling to each other taxon, and sort by the ratio of the two. 
+<i>E. dispar </i> is mismatched as <i> E. histolytica </i> only once compared to 75 reads, and in general simulated <i>Entamoeba</i> reads turn out to not be particularly difficult to map back to their source - among 7172 pairs, the  the <i>E. nuttali</i> reads being aligned to <i>E. dispar</i> at a ratio of 0.08 are the highest on the list at position 940, a far cry from a 0.86 ratio for two brown algae <i> Ectocarpus sp. Ec32 </i> and <i> Ectocarpus siliculosus</i>.
+
+
+Also, coming back to the MAPQ stuff - the mechanism by which the MAPQ>=30 filter improves precision is revealed when we look at precision vs. MAPQ for each source species, for reads sampled without added mutations. Here it is:
+
+![Precision and fraction of reads with MAPQ >=30, by source taxon](figures/precisionBySpecies.png)
+Basically, different species can be more or difficult to tell from other, similar ones. MAPQ is a proxy measure for that - except it's not a reliable way to tell that a match is wrong, MAPQ is frequently low for good matches and when a source species is not in the reference there are plenty of high MAPQ matches to incorrect results. The task of mapping a 100bp read back to its source is in general very easy for a modern aligner, requiring MAPQ >=30 dings everything that has a chance of being wrong - which for some species means throwing away most of the reads - and that's the secret of 99.5%+ precision on simulated reads.
 
 ## Network stuff 
 ```
 todo this is not yet coherent
 ```
+
+To make use of alignments which are only mostly correct, we need a source of information on what markers and taxa are likely to be confused with each other. 
+
+We investigate an alternative approach of using secondary alignments.
 
 EukDetect introduces a concept of primary and secondary hits: a taxon with the most matching reads is considered a primary taxon for its genus, and a more stringent burden of evidence is placed on any other (secondary) results in the same genus.
 

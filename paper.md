@@ -62,13 +62,15 @@ We could, but didn't yet, replicate this conclusion for the range of read length
 
 We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
 
-![wgsim mutation rate - mapq low, nothing counts as "correctly mapped"](figures/leaveOneOut.png)
+![wgsim mutation rate - mapq low, nothing counts as "correctly mapped" by definition (it's not a very good plot) ](figures/leaveOneOut.png)
 
 \newpage
 
 The main result is that read mapping mostly works when mapping sequences from an unknown species: same-genus precision is 82%, same-family precision is 95%, same-genus recall is 30%, and same-family recall is 35%. Adding the MAPQ filter doesn't improve precision, but vastly decreases recall.
 
-![wgsim mutation rate - bars showing the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/barsLeaveOneOut.png)
+![wgsim mutation rate - bars showing same-genus precision is okay, MAPQ >= 30 doesn't improve precision and vastly decreases recall](figures/barsLeaveOneOut.png)
+
+\newpage
 
 
 All the data for the "leave one out" variant of the simulation is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
@@ -84,10 +86,14 @@ For each taxon, we count reads sampled from the sequences of that taxon that ali
 <i>E. dispar </i> is mismatched as <i> E. histolytica </i> only once compared to 75 reads, and in general simulated <i>Entamoeba</i> reads turn out to not be particularly difficult to map back to their source - among 7172 pairs, the  the <i>E. nuttali</i> reads being aligned to <i>E. dispar</i> at a ratio of 0.08 are the highest on the list at position 940, a far cry from a 0.86 ratio for two brown algae <i> Ectocarpus sp. Ec32 </i> and <i> Ectocarpus siliculosus</i>.
 
 
-Also, coming back to the MAPQ stuff - the mechanism by which the MAPQ>=30 filter improves precision is revealed when we look at precision vs. MAPQ for each source species, for reads sampled without added mutations. Here it is:
+Also, coming back to the MAPQ stuff - the mechanism by which the MAPQ>=30 filter improves precision is revealed when we look at precision vs. MAPQ for each source species, for reads sampled without added mutations.
 
-![Precision and fraction of reads with MAPQ >=30, by source taxon](figures/precisionBySpecies.png)
 Basically, different species can be more or difficult to tell from other, similar ones. MAPQ is a proxy measure for that - except it's not a reliable way to tell that a match is wrong, MAPQ is frequently low for good matches and when a source species is not in the reference there are plenty of high MAPQ matches to incorrect results. The task of mapping a 100bp read back to its source is in general very easy for a modern aligner, requiring MAPQ >=30 dings everything that has a chance of being wrong - which for some species means throwing away most of the reads - and that's the secret of 99.5%+ precision on simulated reads.
+
+![Precision and fraction of reads with MAPQ >=30, each dot is source taxon](figures/precisionBySpecies.png)
+
+\newpage
+
 
 ## Network stuff 
 ```

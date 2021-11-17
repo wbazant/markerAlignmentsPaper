@@ -2,11 +2,11 @@
 by Wojtek, Kathryn, Dan, possibly others
 
 # Introduction
-Potential dissimilarity of a sequenced material to any previously known reference is a challenging aspect of identifying reads in an environmental sample. If signal from mapped reads does not take the incompleteness of the reference and potential for false positives into account, reported results can be absurd, as demonstrated in e.g. [@r2020use].
+Potential dissimilarity of a sequenced material to any previously known reference is a challenging aspect of identifying reads in an environmental sample. If signal from mapped reads does not take incompleteness of the reference and potential for false positives into account, reported results can be absurd [@r2020use].
 
-EukDetect [@lind2021accurate] demonstrates using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. There are many eukaryotes, especially fungi, and only some of them have been sequenced (TODO detail?).
+EukDetect [@lind2021accurate] demonstrates that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
 
-By simulating reads we show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms.
+We analyse alignments of simulated reads to show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms.
 
 We then demonstrate an alternative method which incorporates alignments regardless of their reported confidence, and uses multiple alignments per query. We show that it detects more organisms, and can adequately report unknown organisms.
 
@@ -20,7 +20,7 @@ When using `wgsim` we set read length to 100, base error rate to 0, and other pa
 
 ## Results from EukDetect given unknown species
 
-We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and rebuild the index with the remaining nine-tenth.
+We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build the index with the remaining nine-tenth.
 
 First we sample approximately a million reads uniformly across the whole hold-out set, and run EukDetect with the default parameters. The tool reports a filtered list of 145 species, and a larger one of 445 total species. Reported marker coverage varies from 2.24% to 78.19%, not reflecting the uniform coverage we simulated. 
 
@@ -45,19 +45,20 @@ Our basic experiment is to simulate reads from each taxon in the reference and t
 
 \newpage
 
-We investigate the effect of a species being of a different strain than the reference sampled, and also shed more light on the behaviour of the MAPQ >= 30 filter, by adding random mutations to each sampled read and computing summary statistics (figure B). We vary the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Fraction of reads with MAPQ >=30 declines more rapidly than recall. The effect ofonly using alignments with MAPQ >= 30 involves improving precision to between 99.6% and 99.9% over the range of mutated values, at the cost of making recall fall together with the fraction of reads with MAPQ >= 30.
+We investigate the effect of a species being of a different strain than the reference sampled, and also shed more light on the behaviour of the MAPQ >= 30 filter, by adding random mutations to each sampled read and computing summary statistics (figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Fraction of reads with MAPQ >=30 declines more rapidly than recall, and keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99.9% over the range of mutated values at the cost of recall dropping significantly faster.
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 
 
 \newpage
 
-We perform an equivalent analysis with the hold-out set that was earlier used to test EukDetect on unknown species, considering the read to align correctly if it aligns to a taxon of the same genus (figure C). Same-genus precision of 82% is not improved by the addition of the MAPQ >= 30 filter, while the same-genus recall of 30% is decreased to below 7%.
-![(C) Alignments of mutated reads, unknown species](figures/valuesOverMutationRateUnknownSpecies.png)
+We perform an equivalent analysis with the hold-out set and reference, considering the read to align correctly if it aligns to a taxon of the same genus (figure C). Same-genus precision of 82% is not improved by the addition of the MAPQ >= 30 filter, while the same-genus recall of 30% is decreased to below 7%. As mutation rate is increased and recall drops, precision increases slightly.
+
+![(C) Alignments of mutated reads, unknown species, precision and recall on genus level](figures/valuesOverMutationRateUnknownSpecies.png)
 
 \newpage
 
-In our interpretation, the ability of `bowtie2` to correctly place a read to the nearest reference species is very satisfying even as the difference between the source of reads to taxa in the reference becomes quite large, but it starts to report such reads with lower MAPQ. The attempt to further improve precision by removing low MAPQ reads sacrifices the ability to detect unknown strains or novel species, making filtering on reported MAPQ values unsuitable for metagenomics.
+In our interpretation, the ability of `bowtie2` to correctly place a read to the nearest reference species is very satisfying even as the difference between the source of reads to taxa in the reference becomes quite large. The strategy to remove low MAPQ reads does not uniformly improve precision and it sacrifices ability to detect unknown strains or novel species, limiting its utility in metagenomics.
 
 
 \newpage

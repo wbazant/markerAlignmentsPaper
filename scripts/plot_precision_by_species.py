@@ -32,7 +32,9 @@ def do(input_db, output_png, refdb_ncbi):
 
     ncbi = NCBITaxa(refdb_ncbi)
     df = pandas.read_sql_query(sql, sqlite3.connect(input_db))
-    ax = df.plot.scatter(x='fraction_mapq_at_least_30', y='precision')
+    ax = df.plot.scatter(x='fraction_mapq_at_least_30', y='precision', alpha=0.3)
+    ax.set_xlabel("Fraction reads with MAPQ >= 30")
+    ax.set_ylabel("Precision")
     fig = ax.get_figure()
     fig.savefig(output_png, bbox_inches='tight', dpi=199)
     

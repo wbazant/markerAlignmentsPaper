@@ -2,80 +2,64 @@
 by Wojtek, Kathryn, Dan, possibly others
 
 # Introduction
+Potential dissimilarity of a sequenced material to any previously known reference is a challenging aspect of identifying reads in an environmental sample. If signal from mapped reads does not take the incompleteness of the reference and potential for false positives into account, reported results can be absurd, as demonstrated in e.g. [@r2020use].
+
+EukDetect [@lind2021accurate] demonstrates using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. There are many eukaryotes, especially fungi, and only some of them have been sequenced (TODO detail?).
+
+By simulating reads we show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and the filtering used by tool is biased against detection of non-reference strains.
+
+We demonstrate a method of processing read mapping results based on the premise that reported alignments do not have to all be correct, and that alignments can also convey information about a taxon not being present. We show that using information in multiply mapped reads lets us remove off-target alignments and increase sensitivity.
 \newpage
 
 # Methodology and results
 
-## EukDetect has a reference bias
-```
-I guess the quick cross-validation could also go in the introduction
-```
+Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs from OrthoDB [@kriventseva2019orthodb], and use `bowtie2` [@langmead2012fast] to align them back to the reference.
 
-Potential dissimilarity of a sequenced material to any previously known reference is a challenging aspect of identifying reads in an environmental sample, and [@r2020use] demonstrates the perils of an incomplete reference combined with an overly optimistic prediction method.
+When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified.
 
-EukDetect demonstrates that a specially prepared reference of sequences only typically present in eukaryotes can exclude spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication [@lind2021accurate], and a quick cross-validation reveals that the tool is not really prepared to deal with it.
+## Results from EukDetect given unknown species
 
-We remove 371 species from one-tenth of the reference, simulate a million reads, rebuild the index with the rest of the reference, and run EukDetect with default parameters. The tool reports a filtered list of different 145 species at varying levels of presence, and a larger one of 445 total.
+We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and rebuild the index with the remaining nine-tenth.
 
+First we sample approximately a million reads uniformly across the whole hold-out set, and run EukDetect with the default parameters. The tool reports a filtered list of 145 species, and a larger one of 445 total species. Reported marker coverage varies from 2.24% to 78.19%, not reflecting the uniform coverage we simulated. 
 
-There are many eukaryotes, especially fungi, and only some of them have been sequenced (TODO detail?). We analyse how a reference gap looks like in the results, identify some problems, and propose a method based on EukDetect that doesn't have the problems.
+A more detailed analysis involves running species one at a time, at similarly deep coverage, and also maybe at a coverage of 0.1 where EukDetect is reported to begin reliably reporting a mixture of two related species. The results are TODO:
+- stats of zero, one, or more than one species?
+- difference from the original signal: same genus, same family, completely different?
 
-\newpage
-
-
-### Novel strains
-
-Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs, and use `bowtie2` [@langmead2012fast] to align them back to the reference.
-
-First we investigate the effect of a sequenced species being of a different genotype or strain than the reference.
-
-We sample reads from the reference running `wgsim` with mutation rate in a range of values between 0.0 and 0.2, read length set to 100, base error rate set to zero, and other parameters set to their default values. The information on the amount of reads before and after alignment, as well as which BUSCO each read was sampled from, lets us compute a number of statistics about the results, including precision ( a proportion of correctly mapping reads among the reads that map to any reference ), recall ( a proportion of sampled reads that correctly map), their variants where a goal is relaxed to only require mapping to the correct genus or family, and the values these metrics would take if the alignment results got filtered.
-
-Our main result is confirmation of general validity of read mapping when applied to sequences that might exhibit this kind of difference. We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to the taxonomic unit they were sampled from - precision stays between 95% and 96% throughout the range of mutation rates, and same-genus precision is between 99.5% and 99.6%. This is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re].
-
-Average match identity of reported alignments decreases as reflecting the mutations introduced, and average MAPQ drops to zero.
-
-In the SAM specification [@li2009sequence] the MAPQ field was defined as a measure of mapping quality - certainty of where the read should be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample.
-
-We see in Figures 1 and 2 that adding the MAPQ filter improves the precision to between 99.6% and 99.9%, at the cost of making recall much less robust.
-
-
-
-![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
 
 
 \newpage
 
-![wgsim mutation rate - the precision is high, MAPQ >=30 improves precision yet more at a large cost to recall](figures/bars.png)
+## Properties of mapping simulated reads
+
+In the SAM specification [@li2009sequence] the MAPQ field is defined as a measure of mapping quality - certainty with which the mapped read has been be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample, specifically requiring MAPQ >= 30.
+
+We study the behaviour of this filter in the context of information on alignments known to us when sampling simulated species, specifically precision ( a proportion of correctly mapping reads among reads that map to any reference ) and recall ( a proportion of sampled reads that correctly map) [@buckland1994relationship].
+
+Simulating reads from each taxon in the reference and then mapping it back reveals that the difficulty of correctly mapping a sampled read depends on the taxon (figure A) and that the relationship between precision and proportion of reads with MAPQ >= 30 is somewhat one-directional. Taxa whose sampled reads map with low precision also map with MAPQ >= 30 less often, but some taxa map very precisely and with low MAPQ. Overall average precision and recall are both high at 95.1%. 
+
+![(A) Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
 \newpage
 
-In our interpretation `bowtie2` is able to correctly place a read to the nearest reference species even when differences between source taxon and reference are quite large, but it becomes less sure where exactly to align such reads. Most mistakes are near misses, and the MAPQ filter may not always be appropriate.
+We investigate the effect of a species being of a different strain than the reference sampled, and also shed more light on the behaviour of the MAPQ >= 30 filter, by adding random mutations to each sampled read and computing summary statistics (figure B). Varying the `wgsim` mutation rate parameter between 0.0 and 0.2 sees recall drop below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Fraction of reads with MAPQ >=30 declines more rapidly than recall. The effect ofonly using alignments with MAPQ >= 30 involves improving precision to between 99.6% and 99.9% over the range of mutated values, at the cost of making recall fall together with the fraction of reads with MAPQ >= 30.
 
-The MAPQ >=30 filter is crucial to mapping reads with high precision, but it decreases recall and does not aid in approximate identification of novel species. 
+![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 
-We could, but didn't yet, replicate this conclusion for the range of read lengths, and also with the base error model instead of the mutation rate model. All the data that was generated in the simulation is [in the supplement](supplement/wgsim.tsv).
 
 \newpage
 
-### Novel species
-
-We investigate the effect of larger gaps in the reference by taking every tenth species out of EukDetect's reference, simulating reads, and aligning them against the rest of the species.
-
-![wgsim mutation rate - mapq low, nothing counts as "correctly mapped" by definition (it's not a very good plot) ](figures/leaveOneOut.png)
+We perform an equivalent analysis with the hold-out set that was earlier used to test EukDetect on unknown species, considering the read to align correctly if it aligns to a taxon of the same genus (figure C). Same-genus precision of 82% is not improved by the addition of the MAPQ >= 30 filter, while the same-genus recall of 30% is decreased to below 7%.
+![(C) Alignments of mutated reads, unknown species](figures/valuesOverMutationRateUnknownSpecies.png)
 
 \newpage
 
-The main result is that read mapping mostly works when mapping sequences from an unknown species: same-genus precision is 82%, same-family precision is 95%, same-genus recall is 30%, and same-family recall is 35%. Adding the MAPQ filter doesn't improve precision, but vastly decreases recall.
+In our interpretation, the ability of `bowtie2` to correctly place a read to the nearest reference species is very satisfying even as the difference between the source of reads to taxa in the reference becomes quite large, but it starts to report such reads with lower MAPQ. The attempt to further improve precision by removing low MAPQ reads sacrifices the ability to detect unknown strains or novel species, making filtering on reported MAPQ values unsuitable for metagenomics.
 
-![wgsim mutation rate - bars showing same-genus precision is okay, MAPQ >= 30 doesn't improve precision and vastly decreases recall](figures/barsLeaveOneOut.png)
 
 \newpage
 
-
-All the data for the "leave one out" variant of the simulation is [in the supplement](supplement/wgsimLeaveOneOut.tsv).
-
-\newpage
 ## Information about mismatches
 
 EukDetect introduces an element of anticipating potential mismatches - for each genus, a taxon with the most matching reads and greatest coverage is considered the primary for its genus, and a more stringent burden of evidence is placed on any other results in the same genus. It is shown that together with a filter of minimum read count, the method can distinguish a true mixture from off-target hits when simulating reads from two closely related species of <i>Entamoeba</i> at a wide ranges of coverage.
@@ -86,11 +70,11 @@ For each taxon, we count reads sampled from the sequences of that taxon that ali
 <i>E. dispar </i> is mismatched as <i> E. histolytica </i> only once compared to 75 reads, and in general simulated <i>Entamoeba</i> reads turn out to not be particularly difficult to map back to their source - among 7172 pairs, the  the <i>E. nuttali</i> reads being aligned to <i>E. dispar</i> at a ratio of 0.08 are the highest on the list at position 940, a far cry from a 0.86 ratio for two brown algae <i> Ectocarpus sp. Ec32 </i> and <i> Ectocarpus siliculosus</i>.
 
 
-Also, coming back to the MAPQ stuff - the mechanism by which the MAPQ>=30 filter improves precision is revealed when we look at precision vs. MAPQ for each source species, for reads sampled without added mutations.
+Also, coming back to the MAPQ stuff - the mechanism by which the MAPQ >= 30 filter improves precision is revealed when we look at precision vs. MAPQ for each source species, for reads sampled without added mutations.
 
-Basically, different species can be more or difficult to tell from other, similar ones. MAPQ is a proxy measure for that - except it's not a reliable way to tell that a match is wrong, MAPQ is frequently low for good matches and when a source species is not in the reference there are plenty of high MAPQ matches to incorrect results. The task of mapping a 100bp read back to its source is in general very easy for a modern aligner, requiring MAPQ >=30 dings everything that has a chance of being wrong - which for some species means throwing away most of the reads - and that's the secret of 99.5%+ precision on simulated reads.
+Basically, different species can be more or difficult to tell from other, similar ones. MAPQ is a proxy measure for that - except it's not a reliable way to tell that a match is wrong, MAPQ is frequently low for good matches and when a source species is not in the reference there are plenty of high MAPQ matches to incorrect results. The task of mapping a 100bp read back to its source is in general very easy for a modern aligner, requiring MAPQ >= 30 dings everything that has a chance of being wrong - which for some species means throwing away most of the reads - and that's the secret of 99.5%+ precision on simulated reads.
 
-![Precision and fraction of reads with MAPQ >=30, each dot is source taxon](figures/precisionBySpecies.png)
+![Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
 \newpage
 
@@ -328,6 +312,26 @@ The above does not show that, but we are able to show that the presence of addit
 I've written these sections but they're not really useful. They might be good for talking about the stuff internally.
 
 \newpage
+
+
+# Same-genus precision is very high, same-family even higher
+
+
+Our main result is confirmation of general validity of read mapping when applied to sequences that might exhibit this kind of difference. We see that mutated reads, even as they get aligned less frequently, overwhelmingly map to the taxonomic unit they were sampled from - and same-genus precision is between 99.5% and 99.6%. 
+
+Average match identity of reported alignments decreases as reflecting the mutations introduced, and average MAPQ drops to zero.
+
+In the SAM specification [@li2009sequence] the MAPQ field was defined as a measure of mapping quality - certainty of where the read should be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample.
+
+We see in Figures 1 and 2 that adding the MAPQ filter improves the precision to between 99.6% and 99.9%, at the cost of making recall much less robust.
+
+
+-- The main result is that read mapping mostly works when mapping sequences from an unknown species: same-genus precision is 82%, same-family precision is 95%, same-genus recall is 30%, and same-family recall is 35%. Adding the MAPQ filter doesn't improve precision, but vastly decreases recall.
+
+![wgsim mutation rate - mapq drops before recall](figures/wgsimMutationRate.png)
+
+
+![wgsim mutation rate - the precision is high, MAPQ >= 30 improves precision yet more at a large cost to recall](figures/bars.png)
 
 # Introduction
 

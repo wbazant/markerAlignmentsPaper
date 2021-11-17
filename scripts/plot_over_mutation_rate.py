@@ -18,14 +18,14 @@ def main(argv=sys.argv[1:]):
 
 #    df['mutation_rate'] = ["{:.3f}".format(x) for x in df['mutation_rate']]
     
-    ax = df.plot(x="mutation_rate", y="precision" + options.same_what + "WhenMapqAtLeast30Queries", ylim=(0,1), label = "Precision, MAPQ>=30 only")
-    ax = df.plot(x="mutation_rate", y="precision" + options.same_what + "Queries", ylim=(0,1), ax = ax, label = "Precision")
-    ax = df.plot(x="mutation_rate", y="recall" + options.same_what + "Queries", ylim=(0,1), ax = ax, label = "Recall")
-    ax = df.plot(x="mutation_rate", y="recall" + options.same_what + "WhenMapqAtLeast30Queries", ylim=(0,1), ax = ax, label = "Recall, MAPQ>=30 only")
-    ax = df.plot(x="mutation_rate", y="mapqsFractionAtLeast30", ylim=(0,1), ax = ax, label = "Fraction MAPQ>=30")
+    ax = df.plot(x="mutation_rate", y="precision" + options.same_what + "WhenMapqAtLeast30Queries", label = "Precision, MAPQ>=30 only")
+    ax = df.plot(x="mutation_rate", y="precision" + options.same_what + "Queries", ax = ax, label = "Precision")
+    ax = df.plot(x="mutation_rate", y="recall" + options.same_what + "Queries", ax = ax, label = "Recall")
+    ax = df.plot(x="mutation_rate", y="recall" + options.same_what + "WhenMapqAtLeast30Queries", ax = ax, label = "Recall, MAPQ>=30 only")
+    ax = df.plot(x="mutation_rate", y="mapqsFractionAtLeast30", ax = ax, label = "Fraction MAPQ>=30")
     import matplotlib.ticker as mtick
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-#    df.plot(x="mutation_rate", y="mapqsFractionAtLeast30", ylim=(0,1), xlim=(0,0.2))
+#    df.plot(x="mutation_rate", y="mapqsFractionAtLeast30", xlim=(0,0.2))
 
     ax.set_xlabel("Mutation rate")
 

@@ -6,9 +6,10 @@ Potential dissimilarity of a sequenced material to any previously known referenc
 
 EukDetect [@lind2021accurate] demonstrates using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. There are many eukaryotes, especially fungi, and only some of them have been sequenced (TODO detail?).
 
-By simulating reads we show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and the filtering used by tool is biased against detection of non-reference strains.
+By simulating reads we show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms.
 
-We demonstrate a method of processing read mapping results based on the premise that reported alignments do not have to all be correct, and that alignments can also convey information about a taxon not being present. We show that using information in multiply mapped reads lets us remove off-target alignments and increase sensitivity.
+We then demonstrate an alternative method which incorporates alignments regardless of their reported confidence, and uses multiple alignments per query. We show that it detects more organisms, and can adequately report unknown organisms.
+
 \newpage
 
 # Methodology and results
@@ -33,17 +34,18 @@ A more detailed analysis involves running species one at a time, at similarly de
 
 ## Properties of mapping simulated reads
 
-In the SAM specification [@li2009sequence] the MAPQ field is defined as a measure of mapping quality - certainty with which the mapped read has been be positioned in the reference genome. EukDetect uses this field as a filter on evidence about presence of different species in a metagenomic sample, specifically requiring MAPQ >= 30.
+Tools for read mapping like `bowtie` or `samtools` have been developed in the context of reference genomes like the human genome [ @langmead2009ultrafast ], [@li2009sequence]. The SAM specification originating with `samtools`, which `bowtie` and `bowtie2` follow, defines the MAPQ field as a measure of certainty about position of the alignment. Eukdetect aligns metagenomic reads with `bowtie2` to a reference which is not like a single reference genome - it contains groups of similar sequences from many genomes - and one of the filters it applies to the alignments is to require MAPQ >= 30.
 
-We study the behaviour of this filter in the context of information on alignments known to us when sampling simulated species, specifically precision ( a proportion of correctly mapping reads among reads that map to any reference ) and recall ( a proportion of sampled reads that correctly map) [@buckland1994relationship].
 
-Simulating reads from each taxon in the reference and then mapping it back reveals that the difficulty of correctly mapping a sampled read depends on the taxon (figure A) and that the relationship between precision and proportion of reads with MAPQ >= 30 is somewhat one-directional. Taxa whose sampled reads map with low precision also map with MAPQ >= 30 less often, but some taxa map very precisely and with low MAPQ. Overall average precision and recall are both high at 95.1%. 
+We study the effect of including this filter on statistics about success about simulated alignments, specifically precision ( a proportion of correctly mapping reads among reads that map to any reference ) and recall ( a proportion of sampled reads that correctly map) [@buckland1994relationship].
+
+Our basic experiment is to simulate reads from each taxon in the reference and then map it back to the whole reference. Overall average precision and recall are both high at 95.1%. We see that the difficulty of correctly mapping a sampled read depends on which taxon it came from (figure A). Additionally, there is a relationship between precision and proportion of reads with MAPQ >= 30 coming from a taxon: taxa whose sampled reads map with low precision also map with MAPQ >= 30 less often, but some taxa map very precisely and with low MAPQ. 
 
 ![(A) Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
 \newpage
 
-We investigate the effect of a species being of a different strain than the reference sampled, and also shed more light on the behaviour of the MAPQ >= 30 filter, by adding random mutations to each sampled read and computing summary statistics (figure B). Varying the `wgsim` mutation rate parameter between 0.0 and 0.2 sees recall drop below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Fraction of reads with MAPQ >=30 declines more rapidly than recall. The effect ofonly using alignments with MAPQ >= 30 involves improving precision to between 99.6% and 99.9% over the range of mutated values, at the cost of making recall fall together with the fraction of reads with MAPQ >= 30.
+We investigate the effect of a species being of a different strain than the reference sampled, and also shed more light on the behaviour of the MAPQ >= 30 filter, by adding random mutations to each sampled read and computing summary statistics (figure B). We vary the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Fraction of reads with MAPQ >=30 declines more rapidly than recall. The effect ofonly using alignments with MAPQ >= 30 involves improving precision to between 99.6% and 99.9% over the range of mutated values, at the cost of making recall fall together with the fraction of reads with MAPQ >= 30.
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 

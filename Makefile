@@ -1,4 +1,4 @@
-all: paper.pdf
+all: paper.pdf unknownEuks/results-summary.tsv
 
 refdb/ncbi_eukprot_met_arch_markers.fna:
 	mkdir refdb
@@ -8,9 +8,19 @@ refdb/ncbi_eukprot_met_arch_markers.fna:
 
 refdbCrossValidation/nineTenth.fna.1.bt2: refdb/ncbi_eukprot_met_arch_markers.fna
 	mkdir -pv refdbCrossValidation
-	bash scripts/split_eukdb_reference.sh ./refdb/ ./refdbCrossValidation/oneTenth.fna ./refdbCrossValidation/nineTenth.fna
+	bash scripts/split_eukdb_reference.sh ./refdb/ ./refdbCrossValidation/oneTenth.fna ./refdbCrossValidation/oneTenthFolder ./refdbCrossValidation/nineTenth.fna
 	bowtie2-build ./refdbCrossValidation/nineTenth.fna ./refdbCrossValidation/nineTenth.fna
 
+
+unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
+	mkdir -pv unknownEuks
+	mkdir -pv unknownEuks/input
+	mkdir -pv unknownEuks/results
+	bash scripts/wgsim_one_tenth.sh refdbCrossValidation/oneTenthFolder refdbCrossValidation nineTenth.fna unknownEuks/input unknownEuks/conf.yaml unknownEuks/results
+
+unknownEuks/results-summary.tsv: unknownEuks/conf.yaml
+	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
+	wc -l unknownEuks/results/*_hits_table.txt  | grep -v total | perl -nE 'm{(\d+)} and say $1' | sort | uniq -c > unknownEuks/results-summary.tsv
 
 tmp:
 	mkdir -pv tmp

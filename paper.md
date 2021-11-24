@@ -1,10 +1,12 @@
-# Marker alignments paper
-by Wojtek, Kathryn, Dan, possibly others
+# TSSM: a tool to find eukaryotes in metagenomes through taxon-specific sequence matches
+by Wojtek, Ann, Kathryn, Dan, possibly others
 
 # Introduction
-Potential dissimilarity of a sequenced material to any previously known reference is a challenging aspect of identifying reads in an environmental sample. If signal from mapped reads does not take incompleteness of the reference and potential for false positives into account, reported results can be absurd [@r2020use].
+Eukaryotes such as fungi and protists are frequently present in microbial communities. They are more difficult to detect in whole-genome sequencing reads than bacteria and archaea, so their presence is often not reliably reported by common tools.
 
-EukDetect [@lind2021accurate] demonstrates that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
+One challenging aspect of identifying reads in an environmental sample is potential dissimilarity of a sequenced material to any previously known reference. If signal from mapped reads does not take incompleteness of the reference and potential for false positives into account, reported results can be absurd [@r2020use].
+
+A recent method aimed at solving this problem is EukDetect [@lind2021accurate], a tool based on read mapping which exploits the finding that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
 
 We analyse alignments of simulated reads to show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms.
 
@@ -20,13 +22,12 @@ When using `wgsim` we set read length to 100, base error rate to 0, and other pa
 
 ## Results from EukDetect given unknown species
 
-We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build the index with the remaining nine-tenth.
+We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build the index with the remaining nine-tenth. We then simulate reads using `wgsim` at 0.1 coverage skipping any inputs where `wgsim` considers too fragmented, yielding 338 simulated samples each containing reads from one hold-out species.
 
-First we sample approximately a million reads uniformly across the whole hold-out set, and run EukDetect with the default parameters. The tool reports a filtered list of 145 species, and a larger one of 445 total species. Reported marker coverage varies from 2.24% to 78.19%, not reflecting the uniform coverage we simulated. 
+Running EukDetect on each of the the samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set, which is arguably the most correct result possible. 17 are one taxon of a different genus, and 26 are more than one taxon. 
 
-A more detailed analysis involves running species one at a time, at similarly deep coverage, and also maybe at a coverage of 0.1 where EukDetect is reported to begin reliably reporting a mixture of two related species. The results are TODO:
-- stats of zero, one, or more than one species?
-- difference from the original signal: same genus, same family, completely different?
+Running `bowtie2` and keeping samples which have any reads mapped - that is, applying no filtering - reports results for 301 of the samples. We investigate it by applying some of EukDetect's filters in turn. The first filter based on query length has no effect as we are using simulated reads. The second filter applied by EukDetect, based on the MAPQ field, reduces the number of samples with any mapped reads to just 156, additionally requiring reads mapping to two different markers in a taxon narrows down the list further to 133, and also requiring four reads fully accounts for all missing results. Skipping the MAPQ >= 30 field and only requiring two markers and four reads in a taxon reports results for 206 samples. This shows that the choice of filtering rules is key to sensitive detection of organisms using mapped reads.
+
 
 
 

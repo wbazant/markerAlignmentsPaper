@@ -20,7 +20,7 @@ unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
 
 unknownEuks/results-summary.tsv: unknownEuks/conf.yaml
 	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
-	wc -l unknownEuks/results/*_hits_table.txt  | grep -v total | perl -nE 'm{(\d+)} and say $1' | sort | uniq -c > unknownEuks/results-summary.tsv
+	head unknownEuks/results/*_hits_table.txt | perl -E '$/ = "==>"; while(<>){my ($header, @ls) = split "\n"; @ls = grep {not $_ =~ m/^Name|^\w*$|Empty read count|No taxa passing|==>/} @ls; my ($fromSpecies) = $header =~ m{results/(.*)_filtered_hits}; $_ =~ s{\t.*}{} for @ls; say join "\t", $fromSpecies, scalar @ls, @ls;  }' > unknownEuks/results-summary.tsv
 
 tmp:
 	mkdir -pv tmp

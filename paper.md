@@ -16,19 +16,27 @@ We then demonstrate an alternative method which incorporates alignments regardle
 
 # Methodology and results
 
+## Methodology
 Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs from OrthoDB [@kriventseva2019orthodb], and use `bowtie2` [@langmead2012fast] to align them back to the reference.
 
 When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified.
 
+We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set. Skipping any inputs where `wgsim` considers too fragmented yields 338 species to be sampled from.
+
+
+First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. This lets us establish how well EukDetect currently works when given unknown species and identify the MAPQ >= 30 filter as responsible for not passing enough information through.
+
+We follow with an analysis of simulated reads. We simulate a large number of reads and align them. For each aligned read, we record correctness of the match based on its source taxon with the taxon it aligned to as well as properties of the alignment (identity, MAPQ). Then lets us infer trends between reported properties of alignments and two measures of their correctness, namely precision: a proportion of correctly mapping reads among reads that map to any reference, and recall: a proportion of sampled reads that correctly map [@buckland1994relationship].
+
+We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
+
+
 ## Results from EukDetect given unknown species
 
-We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build the index with the remaining nine-tenth. We then simulate reads using `wgsim` at 0.1 coverage skipping any inputs where `wgsim` considers too fragmented, yielding 338 simulated samples each containing reads from one hold-out species.
 
 Running EukDetect on each of the the samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set, which is arguably the most correct result possible. 17 are one taxon of a different genus, and 26 are more than one taxon. 
 
 Running `bowtie2` and keeping samples which have any reads mapped - that is, applying no filtering - reports results for 301 of the samples. We investigate it by applying some of EukDetect's filters in turn. The first filter based on query length has no effect as we are using simulated reads. The second filter applied by EukDetect, based on the MAPQ field, reduces the number of samples with any mapped reads to just 156, additionally requiring reads mapping to two different markers in a taxon narrows down the list further to 133, and also requiring four reads fully accounts for all missing results. Skipping the MAPQ >= 30 field and only requiring two markers and four reads in a taxon reports results for 206 samples. This shows that the choice of filtering rules is key to sensitive detection of organisms using mapped reads.
-
-
 
 
 \newpage
@@ -38,15 +46,16 @@ Running `bowtie2` and keeping samples which have any reads mapped - that is, app
 Tools for read mapping like `bowtie` or `samtools` have been developed in the context of reference genomes like the human genome [ @langmead2009ultrafast ], [@li2009sequence]. The SAM specification originating with `samtools`, which `bowtie` and `bowtie2` follow, defines the MAPQ field as a measure of certainty about position of the alignment. Eukdetect aligns metagenomic reads with `bowtie2` to a reference which is not like a single reference genome - it contains groups of similar sequences from many genomes - and one of the filters it applies to the alignments is to require MAPQ >= 30.
 
 
-We study the effect of including this filter on statistics about success about simulated alignments, specifically precision ( a proportion of correctly mapping reads among reads that map to any reference ) and recall ( a proportion of sampled reads that correctly map) [@buckland1994relationship].
 
-Our basic experiment is to simulate reads from each taxon in the reference and then map it back to the whole reference. Overall average precision and recall are both high at 95.1%. We see that the difficulty of correctly mapping a sampled read depends on which taxon it came from (figure A). Additionally, there is a relationship between precision and proportion of reads with MAPQ >= 30 coming from a taxon: taxa whose sampled reads map with low precision also map with MAPQ >= 30 less often, but some taxa map very precisely and with low MAPQ. 
+Our basic experiment is to simulate reads from each taxon in the reference and then map it back to the whole reference. Overall, average precision and recall are both 95.1%, and adding the MAPQ >= 30 filter increases precision to 99.7% while decreasing recall to 91.7%. To convey the same information with a differently calculated statistic: 8% of the reads map with MAPQ < 30 and 46.2% of those are incorrectly mapped, while among reads with MAPQ >= 30, only 0.3% are incorrectly mapped.
+
+The degree of improvement achieved in this way turns out to depend on the source taxon of the reads (figure A). Out of 3977 taxa, reads from 1908 map with 100% precision. After applying the MAPQ >= 30 filter, 1104 more taxa map with 100% precision, but 146 taxa still have precision worse than the pre-filter average of 95.1%. In the case of five taxa (<i>Fusarium cf. fujikuroi NRRL 66890, Escovopsis sp. Ae733, Favella ehrenbergii, Leishmania peruviana, Mesodinium rubrum</i>) applying the filter decreases precision, and for one taxon (<i>[Chlamydomonas] debaryana var. cristata</i>) applying the filter removes all reads.
 
 ![(A) Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
 \newpage
 
-We investigate the effect of a species being of a different strain than the reference sampled, and also shed more light on the behaviour of the MAPQ >= 30 filter, by adding random mutations to each sampled read and computing summary statistics (figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Fraction of reads with MAPQ >=30 declines more rapidly than recall, and keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99.9% over the range of mutated values at the cost of recall dropping significantly faster.
+The trade-off between gaining precision and losing recall offered by the MAPQ >= 30 filter is revealed when we mutate the reads before alignment (Figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99%, similarly to the case of unmutated reads. However, fraction of reads with MAPQ >=30 declines more rapidly than recall does, and so the cost of improving precision is this way gets disproportionately large.
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 

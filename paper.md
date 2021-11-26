@@ -67,24 +67,17 @@ The picture of increasingly unfavourable trade-offs offered by the MAPQ >= 30 fi
 
 \newpage
 
-### Summary: sequence spaces
+# Discussion
 
-As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads.
+As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads. We can better explain this variability if we re-cast the task of identifying a source of reads given metagenomic reads an a reference as a nearest neighbour search in a space of sequences. A reference consisting of cDNA sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
 
-We can better explain this variability if we re-cast the task of matching a source of reads to a BUSCO as a nearest neighbour search in a space of sequences. A reference of sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
-
-Reads map incorrectly and with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, since most misses are near misses: 89% of simulated reads that do not map back to a sequence of their species map to another species in its genus, and 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. 
+Reads map incorrectly and with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, since most misses are near misses: in our data, 89% of simulated reads that do not map back to a sequence of their species map to another species in its genus, and 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. 
 
 Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, we expect reads to either not map or to correctly map with low MAPQ. This is in line with our data showing downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
 
-In the context of sequence
+# Conclusions
 
-
-In the remainder of this publication we demonstrate an alternative method of processing read mapping results that uses percentage identity and multiple alignments per read. This lets us estimate a source of reads 
-
-
-
-Our alternative method 
+We have shown that the 
 \newpage
 
 ## Information about mismatches

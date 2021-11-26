@@ -10,6 +10,7 @@ A recent method aimed at solving this problem is EukDetect [@lind2021accurate], 
 
 We analyse alignments of simulated reads to show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms.
 
+
 We then demonstrate an alternative method which incorporates alignments regardless of their reported confidence, and uses multiple alignments per query. We show that it detects more organisms, and can adequately report unknown organisms.
 
 \newpage
@@ -34,7 +35,7 @@ We do this in three contexts: reads sampled from the whole reference and then ma
 ## Results from EukDetect given unknown species
 
 
-Running EukDetect on each of the the samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set, which is arguably the most correct result possible. 17 are one taxon of a different genus, and 26 are more than one taxon. 
+Running EukDetect on each of the samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set, which is arguably the most correct result possible. 17 are one taxon of a different genus, and 26 are more than one taxon. 
 
 Running `bowtie2` and keeping samples which have any reads mapped - that is, applying no filtering - reports results for 301 of the samples. We investigate it by applying some of EukDetect's filters in turn. The first filter based on query length has no effect as we are using simulated reads. The second filter applied by EukDetect, based on the MAPQ field, reduces the number of samples with any mapped reads to just 156, additionally requiring reads mapping to two different markers in a taxon narrows down the list further to 133, and also requiring four reads fully accounts for all missing results. Skipping the MAPQ >= 30 field and only requiring two markers and four reads in a taxon reports results for 206 samples. This shows that the choice of filtering rules is key to sensitive detection of organisms using mapped reads.
 
@@ -49,31 +50,46 @@ Tools for read mapping like `bowtie` or `samtools` have been developed in the co
 
 Our basic experiment is to simulate reads from each taxon in the reference and then map it back to the whole reference. Overall, average precision and recall are both 95.1%, and adding the MAPQ >= 30 filter increases precision to 99.7% while decreasing recall to 91.7%. To convey the same information with a differently calculated statistic: 8% of the reads map with MAPQ < 30 and 46.2% of those are incorrectly mapped, while among reads with MAPQ >= 30, only 0.3% are incorrectly mapped.
 
-The degree of improvement achieved in this way turns out to depend on the source taxon of the reads (figure A). Out of 3977 taxa, reads from 1908 map with 100% precision. After applying the MAPQ >= 30 filter, 1104 more taxa map with 100% precision, but 146 taxa still have precision worse than the pre-filter average of 95.1%. In the case of five taxa (<i>Fusarium cf. fujikuroi NRRL 66890, Escovopsis sp. Ae733, Favella ehrenbergii, Leishmania peruviana, Mesodinium rubrum</i>) applying the filter decreases precision, and for one taxon (<i>[Chlamydomonas] debaryana var. cristata</i>) applying the filter removes all reads.
+
+The degree of improvement achieved in this way turns out to depend on the source taxon of the reads (figure A). Out of 3977 taxa whose reads map back to the reference, reads from 1908 map with 100% precision. After applying the MAPQ >= 30 filter, 1105 more taxa map with 100% precision, but 146 taxa still have precision worse than the pre-filter average of 95.1%. In the case of five taxa (<i>Fusarium cf. fujikuroi NRRL 66890, Escovopsis sp. Ae733, Favella ehrenbergii, Leishmania peruviana, Mesodinium rubrum</i>) applying the filter decreases precision, and for one taxon (<i>[Chlamydomonas] debaryana var. cristata</i>) applying the filter removes all reads.
 
 ![(A) Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
+
+Within the hold-out set, the effect of applying the MAPQ >= 30 filter continues to vary, but overall it is much less favourable. Same-genus precision of 82% only increases to 83.6%, while the same-genus recall of 30% is decreased to below 7%. Among 322 taxa in the hold-out set whose reads map to the remaining set, 48 map only to the taxa of the same genus, while 117 do not map to taxa of the same genus at all. Applying the MAPQ >= 30 filter only keeps reads mapping to correct genus for 94 more taxa, while removing all reads that map to the correct genus in 6 cases, and removes all reads for 126 taxa.
+
 \newpage
 
-The trade-off between gaining precision and losing recall offered by the MAPQ >= 30 filter is revealed when we mutate the reads before alignment (Figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99%, similarly to the case of unmutated reads. However, fraction of reads with MAPQ >=30 declines more rapidly than recall does, and so the cost of improving precision is this way gets disproportionately large.
+The picture of increasingly unfavourable trade-offs offered by the MAPQ >= 30 filter in the face of increasing ambiguity is made complete through an analysis of reads that are mutated before alignment (Figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99%, similarly to the case of unmutated reads. However, fraction of reads with MAPQ >=30 declines more rapidly than recall does, and so the cost of improving precision is this way gets disproportionately large.
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 
 
 \newpage
 
-We perform an equivalent analysis with the hold-out set and reference, considering the read to align correctly if it aligns to a taxon of the same genus (figure C). Same-genus precision of 82% is not improved by the addition of the MAPQ >= 30 filter, while the same-genus recall of 30% is decreased to below 7%. As mutation rate is increased and recall drops, precision increases slightly.
+### Summary: sequence spaces
 
-![(C) Alignments of mutated reads, unknown species, precision and recall on genus level](figures/valuesOverMutationRateUnknownSpecies.png)
+As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads.
 
-\newpage
+We can better explain this variability if we re-cast the task of matching a source of reads to a BUSCO as a nearest neighbour search in a space of sequences. A reference of sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
 
-In our interpretation, the ability of `bowtie2` to correctly place a read to the nearest reference species is very satisfying even as the difference between the source of reads to taxa in the reference becomes quite large. The strategy to remove low MAPQ reads does not uniformly improve precision and it sacrifices ability to detect unknown strains or novel species, limiting its utility in metagenomics.
+Reads map incorrectly and with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, since most misses are near misses: 89% of simulated reads that do not map back to a sequence of their species map to another species in its genus, and 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. 
+
+Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, we expect reads to either not map or to correctly map with low MAPQ. This is in line with our data showing downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
+
+In the context of sequence
 
 
+In the remainder of this publication we demonstrate an alternative method of processing read mapping results that uses percentage identity and multiple alignments per read. This lets us estimate a source of reads 
+
+
+
+Our alternative method 
 \newpage
 
 ## Information about mismatches
+
+Assigning a read to the sequence it is most similar to is generally possible with `bowtie2`, and frequently very successful: reads simulated from 1908 / 3977 taxa map back with 100% precision as quoted before, and same-genus precision of mapping reads from a hold-out set is as high as 82%. 
 
 EukDetect introduces an element of anticipating potential mismatches - for each genus, a taxon with the most matching reads and greatest coverage is considered the primary for its genus, and a more stringent burden of evidence is placed on any other results in the same genus. It is shown that together with a filter of minimum read count, the method can distinguish a true mixture from off-target hits when simulating reads from two closely related species of <i>Entamoeba</i> at a wide ranges of coverage.
 
@@ -90,6 +106,37 @@ Basically, different species can be more or difficult to tell from other, simila
 ![Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
 \newpage
+
+## Sequence space stuff
+
+Maynard Smith, John (7 February 1970). "Natural Selection and the Concept of a Protein Space". Nature. 225 (5232): 563–564. Bibcode:1970Natur.225..563M. doi:10.1038/225563a0. PMID 5411867. S2CID 204994726.
+
+- the landscape of existing proteins is made up of islands of related sequences
+- mapping reads corresponds to a problem of finding the nearest neighbour
+- explains variability of success: 
+- suggests link between correctness of match and identity?
+
+
+
+
+
+
+
+
+
+Filtering on the MAPQ field does not originate with EukDetect - it is also present in MetaPhlAn [@segata2012metagenomic]. 
+
+Tools for read mapping like `bowtie` or `samtools` have been developed in the context of reference genomes like the human genome [ @langmead2009ultrafast ], [@li2009sequence]. The SAM specification originating with `samtools`, which `bowtie` and `bowtie2` follow, defines the MAPQ field as a measure of certainty about position of the alignment. 
+
+The variance in trade-offs offered by the MAPQ >= 30 filter can be 
+In the context of neareast 
+
+MAPQ is a measure of ambiguity, and decreases when there are several nearby proteins or when there 
+
+
+Tools for read mapping like `bowtie` or `samtools` have been developed in the context of reference genomes like the human genome [ @langmead2009ultrafast ], [@li2009sequence]. The SAM specification originating with `samtools`, which `bowtie` and `bowtie2` follow, defines the MAPQ field as a measure of certainty about position of the alignment. Eukdetect aligns metagenomic reads with `bowtie2` to a reference which is not like a single reference genome - it contains groups of similar sequences from many genomes - and one of the filters it applies to the alignments is to require MAPQ >= 30.
+
+ Bornberg-Bauer, E (Nov 1997). "How are model protein structures distributed in sequence space?". Biophysical Journal. 73 (5): 2393–403. Bibcode:1997BpJ....73.2393B. doi:10.1016/S0006-3495(97)78268-7. PMC 1181141. PMID 9370433.
 
 
 ## Network stuff 

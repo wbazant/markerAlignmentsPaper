@@ -9,6 +9,8 @@ import statistics
 import logging
 import subprocess
 import sqlite3
+import itertools
+import numpy as np
 
 import matplotlib.pyplot as plt
 import pandas
@@ -34,7 +36,7 @@ from (
     case when sum(c) == count(c) then 1 else 0 end as is_match,
     case when sum(c) == count(c) and mapq >=30 then 1 else 0 end as is_match_and_mapq_at_least_30
   from (
-    select query, source_taxon, matched_taxon, mapq, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+    select query, source_taxon, matched_taxon, mapq, case when {MATCH_TYPE_CLAUSE} then 1 else 0 end as c
     from alignment_from_known_source
   ) a
     group by a.query, source_taxon, matched_taxon, mapq
@@ -42,21 +44,67 @@ from (
 order by avg_mapq
 '''
 
-def get_data(input_db, refdb_ncbi):
+def match_types(same_what):
+    refs = ['true_match', 'species', 'genus', 'family']
+    if same_what not in refs:
+        raise ValueError("Same what?: " + same_what)
+    ix = refs.index(same_what)
+    return "match_type in (" + ", ".join(["'{}'".format(x) for x in refs[:ix+1]]) + ")"
+
+def get_data(input_db, same_what, refdb_ncbi, **kwargs):
     ncbi = NCBITaxa(refdb_ncbi)
-    df = pandas.read_sql_query(sql, sqlite3.connect(input_db))
+    df = pandas.read_sql_query(sql.format(MATCH_TYPE_CLAUSE=match_types(same_what)), sqlite3.connect(input_db))
     df['kingdom'] = [get_kingdom(ncbi, x) for x in df['source_taxon']]
     df['delta_precision'] = df['precision_mapq_at_least_30'] - df['precision']
+
+    print("All taxa that map: " + str(len(df)))
+    print("Taxa that map perfectly: " + taxa_that_map_perfectly(ncbi, df))
+    print("Taxa that map perfectly only with mapq filter: " + taxa_that_map_perfectly_only_with_mapq_filter(ncbi, df))
+    print("Taxa that only map incorrectly: " + taxa_that_dont_map(ncbi, df))
+    print("Taxa that only map incorrectly with mapq filter: " + taxa_that_dont_map_only_with_mapq_filter(ncbi, df))
+    print("Taxa that get worse: " + taxa_that_get_worse(ncbi, df))
+    print("Taxa that get wiped: " + taxa_that_get_wiped(ncbi, df))
     return df
 
-# Fusarium cf. fujikuroi NRRL 66890, Escovopsis sp. Ae733, Favella ehrenbergii, Leishmania peruviana, Mesodinium rubrum
-def taxa_that_get_worse(df):
-    import itertools
-    return ", ".join(list(itertools.chain.from_iterable([ncbi.get_taxid_translator([taxid]).values() for taxid in df[df['precision_mapq_at_least_30'] - df['precision'] < - 0.01]['source_taxon']])))
 
-def do(input_db, output_png, refdb_ncbi):
+def taxa_stat(ncbi, df, ix):
+    l = list(itertools.chain.from_iterable([ncbi.get_taxid_translator([taxid]).values() for taxid in df[ix]['source_taxon']]))
+    result = str(len(l))
+    if len(l) < 10:
+        result +=  ". " + ", ".join(l)
+    return(str(len(l)))
 
-    df = get_data(input_db, refdb_ncbi)
+def taxa_that_dont_map(ncbi, df):
+    ix = df['precision'] < 0.0001
+    return taxa_stat(ncbi, df, ix)
+
+def taxa_that_dont_map_only_with_mapq_filter(ncbi, df):
+    ix = (df['precision'] > 0.0001) & ( df['precision_mapq_at_least_30'] < 0.0001 )
+    return taxa_stat(ncbi, df, ix)
+
+def taxa_that_map_perfectly(ncbi, df):
+    ix = df['precision'] >= 0.99999
+    return taxa_stat(ncbi, df, ix)
+
+def taxa_that_map_perfectly_only_with_mapq_filter(ncbi, df):
+    ix = (df['precision'] < 0.99999 ) & (df['precision_mapq_at_least_30'] >= 0.99999 )
+    return taxa_stat(ncbi, df, ix)
+
+def taxa_that_get_worse(ncbi, df):
+    ix = df['precision_mapq_at_least_30'] - df['precision'] < - 0.01
+    return taxa_stat(ncbi, df, ix)
+
+
+def taxa_that_get_wiped(ncbi, df):
+    ix = np.isnan(df['precision_mapq_at_least_30'])
+    return taxa_stat(ncbi, df, ix)
+
+
+
+def do(input_db, same_what, refdb_ncbi, output_png):
+
+    df = get_data(input_db, same_what, refdb_ncbi)
+
     fig, ax = plt.subplots()
 # no legend!
 #    colors = { "Metazoa": "yellow", "Viridiplantae": "blue", "Fungi": "green", "Other": "grey"}
@@ -93,6 +141,7 @@ def opts(argv):
     parser.add_argument("--output-png", type=str, action="store", dest="output_png", required=True)
     parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa")
 
+    parser.add_argument("--aggregation-level", type=str, action="store", dest="same_what", required=True)
     return parser.parse_args(argv)
 
 def main(argv=sys.argv[1:]):

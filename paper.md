@@ -1,4 +1,5 @@
-# TSSM: a tool to find eukaryotes in metagenomes through taxon-specific sequence matches
+# Eukaryotes can be detected through mapping reads to a reference of marker genes
+
 by Wojtek, Ann, Kathryn, Dan, possibly others
 
 # Introduction
@@ -8,10 +9,7 @@ One challenging aspect of identifying reads in an environmental sample is potent
 
 A recent method aimed at solving this problem is EukDetect [@lind2021accurate], a tool based on read mapping which exploits the finding that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
 
-We analyse alignments of simulated reads to show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms.
-
-
-We then demonstrate an alternative method which incorporates alignments regardless of their reported confidence, and uses multiple alignments per query. We show that it detects more organisms, and can adequately report unknown organisms.
+We analyse alignments of simulated reads to show that EukDetect can report incorrect results when the sequenced material contains an unknown species, and EukDetect's removal of less confident alignments also biases it against detection of non-reference strains of known organisms. Nevertheless, reads from eukaryotic sequences can generally be mapped to their nearest known reference, and using specially chosen sequences offers a lot of potential.
 
 \newpage
 
@@ -71,13 +69,14 @@ The picture of increasingly unfavourable trade-offs offered by the MAPQ >= 30 fi
 
 As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads. We can better explain this variability if we re-cast the task of identifying a source of reads given metagenomic reads an a reference as a nearest neighbour search in a space of sequences. A reference consisting of cDNA sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
 
-Reads map incorrectly and with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, since most misses are near misses: in our data, 89% of simulated reads that do not map back to a sequence of their species map to another species in its genus, and 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. 
+Reads map incorrectly as well as with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, since most misses are near misses: in our data, 89% of simulated reads that do not map back to a sequence of their species map to another species in its genus, and 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. 
 
 Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, we expect reads to either not map or to correctly map with low MAPQ. This is in line with our data showing downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
 
 # Conclusions
 
-We have shown that the 
+We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. For accurate and sensitive detection of microbial eukaryotes from whole metagenome shotgun sequencing to be possible, a method of dealing with potentially incorrect hits is required, but if reference bias is of concern the method should not involve filtering on the MAPQ field.
+
 \newpage
 
 ## Information about mismatches

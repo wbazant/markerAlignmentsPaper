@@ -127,6 +127,22 @@ def do_one(ncbi, marker_to_taxon, read_length, base_error_rate, mutation_rate, w
 #        summary["precisionSameFamilyWhenMapqAtLeast30Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameFamilyWhenMapqAtLeast30"] / summary["numBuscosMappedWhenMapqAtLeast30"]
         summary["recallSameFamilyWhenMapqAtLeast30Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameFamilyWhenMapqAtLeast30"] / summary["numQueriesTotal"]
 #        summary["recallSameFamilyWhenMapqAtLeast30Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameFamilyWhenMapqAtLeast30"] / summary["numBuscosTotal"]
+        summary["precisionWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsMatchWhenMapqAtLeast5"] / summary["numQueriesMappedWhenMapqAtLeast5"]
+#        summary["precisionWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsMatchWhenMapqAtLeast5"] / summary["numBuscosMappedWhenMapqAtLeast5"]
+        summary["recallWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsMatchWhenMapqAtLeast5"] / summary["numQueriesTotal"]
+#        summary["recallWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsMatchWhenMapqAtLeast5"] / summary["numBuscosTotal"]
+        summary["precisionSameSpeciesWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameSpeciesWhenMapqAtLeast5"] / summary["numQueriesMappedWhenMapqAtLeast5"]
+#        summary["precisionSameSpeciesWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameSpeciesWhenMapqAtLeast5"] / summary["numBuscosMappedWhenMapqAtLeast5"]
+        summary["recallSameSpeciesWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameSpeciesWhenMapqAtLeast5"] / summary["numQueriesTotal"]
+#        summary["recallSameSpeciesWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameSpeciesWhenMapqAtLeast5"] / summary["numBuscosTotal"]
+        summary["precisionSameGenusWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameGenusWhenMapqAtLeast5"] / summary["numQueriesMappedWhenMapqAtLeast5"]
+#        summary["precisionSameGenusWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameGenusWhenMapqAtLeast5"] / summary["numBuscosMappedWhenMapqAtLeast5"]
+        summary["recallSameGenusWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameGenusWhenMapqAtLeast5"] / summary["numQueriesTotal"]
+#        summary["recallSameGenusWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameGenusWhenMapqAtLeast5"] / summary["numBuscosTotal"]
+        summary["precisionSameFamilyWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameFamilyWhenMapqAtLeast5"] / summary["numQueriesMappedWhenMapqAtLeast5"]
+#        summary["precisionSameFamilyWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameFamilyWhenMapqAtLeast5"] / summary["numBuscosMappedWhenMapqAtLeast5"]
+        summary["recallSameFamilyWhenMapqAtLeast5Queries"] = 1.0 * summary["numQueriesMappedOnlyAsSameFamilyWhenMapqAtLeast5"] / summary["numQueriesTotal"]
+#        summary["recallSameFamilyWhenMapqAtLeast5Buscos"] = 1.0 * summary["numBuscosMappedOnlyAsSameFamilyWhenMapqAtLeast5"] / summary["numBuscosTotal"]
 
 
         with open(summary_path, 'w') as f:
@@ -378,6 +394,54 @@ def stats_from_store(store):
               from (
                 select query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
                 from alignment_from_known_source where mapq >=30
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedWhenMapqAtLeast5": query_one_number(store, '''
+          select count(distinct query)
+            from alignment_from_known_source where mapq >=5
+        '''),
+        "numQueriesMappedOnlyAsMatchWhenMapqAtLeast5": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=5
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameSpeciesWhenMapqAtLeast5": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=5
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameGenusWhenMapqAtLeast5": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species', 'genus') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=5
+              ) a
+              group by a.query
+              having allowed_matches = all_matches
+        )
+        '''),
+        "numQueriesMappedOnlyAsSameFamilyWhenMapqAtLeast5": query_one_number(store, '''
+         select count(*) from (
+              select a.query, sum(c) as allowed_matches, count(c) as all_matches
+              from (
+                select query, case when match_type in ('true_match', 'species', 'genus', 'family') then 1 else 0 end as c
+                from alignment_from_known_source where mapq >=5
               ) a
               group by a.query
               having allowed_matches = all_matches

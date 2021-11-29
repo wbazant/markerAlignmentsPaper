@@ -19,9 +19,14 @@ unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
 	bash scripts/wgsim_one_tenth.sh refdbCrossValidation/oneTenthFolder refdbCrossValidation nineTenth.fna unknownEuks/input unknownEuks/conf.yaml unknownEuks/results
 
 unknownEuks/results-summary.tsv: unknownEuks/conf.yaml
+	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 5 -bS}g' /home/wbazant/dev/EukDetect/rules/eukdetect.rules
 	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
-	head unknownEuks/results/*_hits_table.txt | perl -E '$/ = "==>"; while(<>){my ($header, @ls) = split "\n"; @ls = grep {not $_ =~ m/^Name|^\w*$|Empty read count|No taxa passing|==>/} @ls; my ($fromSpecies) = $header =~ m{results/(.*)_filtered_hits}; $_ =~ s{\t.*}{} for @ls; say join "\t", $fromSpecies, scalar @ls, @ls;  }' > unknownEuks/results-summary.tsv
+	head unknownEuks/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuks/results-summary.tsv
 
+unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv
+	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 30 -bS}g' /home/wbazant/dev/EukDetect/rules/eukdetect.rules
+	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
+	head unknownEuksUnmodifiedEukdetect/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuksUnmodifiedEukdetect/results-summary.tsv
 tmp:
 	mkdir -pv tmp
 
@@ -58,7 +63,7 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 	python3 scripts/plot_bars.py --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-png figures/barsLeaveOneOut.png 
 
 figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
-	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite
+	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species
 
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
 	mkdir -pv supplement

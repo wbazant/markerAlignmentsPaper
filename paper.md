@@ -1,8 +1,8 @@
-# Mapping to a reference of marker genes can detect novel eukaryotes
+# Mapping metagenomic reads to a reference of markers can detect novel eukaryotes
 
 by Wojtek, Ann, Kathryn, Dan, possibly others
 
-# Introduction
+## Introduction
 Eukaryotes such as fungi and protists are frequently present in microbial communities. They are more difficult to detect in whole-genome sequencing reads than bacteria and archaea, so their presence is often not reliably reported by common tools.
 
 One challenging aspect of identifying reads in an environmental sample is potential dissimilarity of a sequenced material to any previously known reference. If signal from mapped reads does not take incompleteness of the reference and potential for false positives into account, reported results can be absurd [@r2020use].
@@ -14,9 +14,8 @@ We use alignments of simulated reads to show that EukDetect is able to report ap
 
 \newpage
 
-# Methodology and results
-
 ## Methodology
+
 Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs from OrthoDB [@kriventseva2019orthodb], and use `bowtie2` [@langmead2012fast] to align them back to the reference.
 
 When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified.
@@ -31,7 +30,8 @@ We follow with an analysis of simulated reads. We simulate a large number of rea
 We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
 
 
-## Results from EukDetect given unknown species
+## Results
+### EukDetect given unknown species
 
 
 Running EukDetect on each of the samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set. 17 are one taxon of a different genus, and 26 are more than one taxon. 
@@ -43,7 +43,7 @@ Re-running EukDetect modified to filter on MAPQ >= 5 reports some results for 16
 
 \newpage
 
-## Properties of mapping simulated reads
+### Mapping simulated reads
 
 Tools for read mapping like `bowtie` or `samtools` have been developed in the context of reference genomes like the human genome [ @langmead2009ultrafast ], [@li2009sequence]. The SAM specification originating with `samtools`, which `bowtie` and `bowtie2` follow, defines the MAPQ field as a measure of certainty about position of the alignment. Eukdetect aligns metagenomic reads with `bowtie2` to a reference which is not like a single reference genome - it contains groups of similar sequences from many genomes - and one of the filters it applies to the alignments is to require MAPQ >= 30.
 
@@ -65,30 +65,36 @@ The effect of applying the MAPQ >= 30 filter continues to vary for different tax
 
 \newpage
 
-The picture of increasingly unfavourable trade-offs offered by the MAPQ >= 30 filter in the face of increasing ambiguity is made complete through an analysis of reads that are mutated before alignment (Figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99%, similarly to the case of unmutated reads. However, fraction of reads with MAPQ >=30 declines more rapidly than recall does, and so the cost of improving precision is this way gets disproportionately large.
+To understand an effect of smaller differences between reference and signal, we analyse reads that are mutated before alignment (Figure B). We gradually increase the `wgsim` mutation rate parameter until recall drops below 10%. Precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99%, similarly to the case of unmutated reads. However, fraction of reads with MAPQ >=30 declines more rapidly than recall does, and so the cost of improving precision is this way gets disproportionately large.
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 
 
 \newpage
 
-# Discussion
+## Discussion
 
 As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads. We can better explain this variability if we re-cast the task of identifying a source of reads given metagenomic reads an a reference as a nearest neighbour search in a space of sequences. A reference consisting of cDNA sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
 
 Reads map incorrectly as well as with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses.
 
-Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, we expect reads to either not map or to correctly map with low MAPQ. This is in line with our data showing downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
+Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, the nearest neighbour interpretation of read mapping leads us to expect reads to either not map or to correctly map with low MAPQ. This is in line with our data showing downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
 
-# Conclusions
+## Conclusion
 
-We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs, but an increased number of off-target hits is a drawback.
+We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs - higher precision and recall for unknown species, but also an increased number of off-target hits.
 
-While the value of MAPQ is linked to correctness of results in general, it is not reliable measurement of uncertainty per read when mapping metagenomic reads to a reference of markers. Instead of using the MAPQ value to filter alignments before binning them, tools like EukDetect could instead filter on average MAPQ per detected taxon in conjunction with other measures of uncertainty of results.
+We conclude that while the value of MAPQ is linked to correctness of results in general, it is not a reliable measurement of uncertainty per read when mapping metagenomic reads to a reference of markers. Instead of using the MAPQ value to filter alignments before binning them, tools like EukDetect could filter on average MAPQ per detected taxon, or the value in conjunction with other measures of uncertainty of results.
 
 \newpage
 
 
+\newpage
+
+# Not in the paper
+I've written these sections when the paper was going to be bigger. Perhaps there's a whole paper in there ! :)
+
+\newpage
 
 
 
@@ -385,7 +391,7 @@ The above does not show that, but we are able to show that the presence of addit
 
 
 \newpage
-# Not in the paper
+# Not in the paper - old
 I've written these sections but they're not really useful. They might be good for talking about the stuff internally.
 
 \newpage

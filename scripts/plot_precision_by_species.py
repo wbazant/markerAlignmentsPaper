@@ -126,9 +126,10 @@ def get_kingdom(ncbi, taxid):
     d = ncbi.get_rank(lineage)
     ks = [k for k in d if d[k] == 'kingdom']
     if len(ks) == 1:
-      return names[ks[0]]
+      result = names[ks[0]]
+      return "Plants" if result == "Viridiplantae" else result
     if 2759 in d:
-        return "Other"
+        return "Protists"
     raise ValueError(d)
 
 

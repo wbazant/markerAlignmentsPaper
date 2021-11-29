@@ -12,6 +12,8 @@ if ! ( [ "$oneTenthFolder" -a "$refdbDir" -a "$refdbPrefix" -a "$simPath" -a "$o
   exit 1
 fi
 
+#perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 5 -bS}g' /home/wbazant/dev/EukDetect/rules/eukdetect.rules
+
 cat <<EOF > $outputConf
 output_dir: "$outputResults"
 paired_end: true

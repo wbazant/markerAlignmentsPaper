@@ -23,7 +23,7 @@ When using `wgsim` we set read length to 100, base error rate to 0, and other pa
 We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set. Skipping any inputs where `wgsim` considers too fragmented yields 338 species to be sampled from.
 
 
-First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. This lets us establish how well EukDetect currently works when given unknown species and identify the MAPQ >= 30 filter as responsible for not passing enough information through.
+First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. This lets us establish how well EukDetect currently works when given unknown species and identify the MAPQ >= 30 filter as responsible for not passing enough information through. To investigate the effect of making this filter more permissive, we modify the EukDetect source code, replacing the filter with MAPQ >= 5 used by default in MetaPhlAn [@segata2012metagenomic], a frequently used program for estimating taxonomic abundance also based on read mapping.
 
 We follow with an analysis of simulated reads. We simulate a large number of reads and align them. For each aligned read, we record correctness of the match based on its source taxon with the taxon it aligned to as well as properties of the alignment (identity, MAPQ). Then lets us infer trends between reported properties of alignments and two measures of their correctness, namely precision: a proportion of correctly mapping reads among reads that map to any reference, and recall: a proportion of sampled reads that correctly map [@buckland1994relationship].
 
@@ -46,7 +46,8 @@ Tools for read mapping like `bowtie` or `samtools` have been developed in the co
 
 
 
-Our basic experiment is to simulate reads from each taxon in the reference and then map it back to the whole reference. Overall, average precision and recall are both 95.1%, and adding the MAPQ >= 30 filter increases precision to 99.7% while decreasing recall to 91.7%. To convey the same information with a differently calculated statistic: 8% of the reads map with MAPQ < 30 and 46.2% of those are incorrectly mapped, while among reads with MAPQ >= 30, only 0.3% are incorrectly mapped.
+Our basic experiment is to simulate reads from each taxon in the reference and then map it back to the whole reference. Most reads map correctly - overall, average precision and recall are both 95.1%, and adding the MAPQ >= 30 filter increases precision to 99.7% while decreasing recall to 91.7%. To convey the same information with a differently calculated statistic: 8% of the reads map with MAPQ < 30 and 46.2% of those are incorrectly mapped, while among reads with MAPQ >= 30, only 0.3% are incorrectly mapped. Most misses are near misses: 89% of reads that do not map back to a sequence of their species map within the correct genus. Average MAPQ value among correct mappings is 36.1, among near misses 5.2, and 4.4 among other misses. For MAPQ >= 5, precision and recall are TODO.
+
 
 
 The degree of improvement achieved in this way turns out to depend on the source taxon of the reads (figure A). Out of 3977 taxa whose reads map back to the reference, reads from 1908 map with 100% precision. After applying the MAPQ >= 30 filter, 1105 more taxa map with 100% precision, but 146 taxa still have precision worse than the pre-filter average of 95.1%. In the case of five taxa (<i>Fusarium cf. fujikuroi NRRL 66890, Escovopsis sp. Ae733, Favella ehrenbergii, Leishmania peruviana, Mesodinium rubrum</i>) applying the filter decreases precision, and for one taxon (<i>[Chlamydomonas] debaryana var. cristata</i>) applying the filter removes all reads.
@@ -54,7 +55,12 @@ The degree of improvement achieved in this way turns out to depend on the source
 ![(A) Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
 
-Within the hold-out set, the effect of applying the MAPQ >= 30 filter continues to vary, but overall it is much less favourable. Same-genus precision of 82% only increases to 83.6%, while the same-genus recall of 30% is decreased to below 7%. Among 322 taxa in the hold-out set whose reads map to the remaining set, 48 map only to the taxa of the same genus, while 117 do not map to taxa of the same genus at all. Applying the MAPQ >= 30 filter only keeps reads mapping to correct genus for 94 more taxa, while removing all reads that map to the correct genus in 6 cases, and removes all reads for 126 taxa.
+
+Within the hold-out set, most misses are still near misses - 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. Average MAPQ value is 12.7 for reads that map to the same genus, 11.7 among reads that map to different genus within the same family, and 14.8 for reads that map to a different family.
+
+The effect of applying the MAPQ >= 30 filter continues to vary, but overall it is less favourable. Same-genus precision of 82% only increases to 83.6%, while the same-genus recall of 30% is decreased to below 7%. For MAPQ >= 5, the equivalent precision and recall values are TODO.
+
+Among 322 taxa in the hold-out set whose reads map to the remaining set, 48 map only to the taxa of the same genus, while 117 do not map to taxa of the same genus at all. Applying the MAPQ >= 30 filter only keeps reads mapping to correct genus for 94 more taxa, while removing all reads that map to the correct genus in 6 cases, and removes all reads for 126 taxa.
 
 \newpage
 
@@ -69,15 +75,33 @@ The picture of increasingly unfavourable trade-offs offered by the MAPQ >= 30 fi
 
 As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads. We can better explain this variability if we re-cast the task of identifying a source of reads given metagenomic reads an a reference as a nearest neighbour search in a space of sequences. A reference consisting of cDNA sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
 
-Reads map incorrectly as well as with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, since most misses are near misses: in our data, 89% of simulated reads that do not map back to a sequence of their species map to another species in its genus, and 73% of reads from a hold-out set that do not map back to their genus map to another genus in the same family. 
+Reads map incorrectly as well as with low MAPQ in particularly congested areas of sequence space because similarity of reference sequences makes mapping reads more difficult [@clausen2018rapid]. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses.
 
 Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, we expect reads to either not map or to correctly map with low MAPQ. This is in line with our data showing downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
 
 # Conclusions
 
-We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. For accurate and sensitive detection of microbial eukaryotes from whole metagenome shotgun sequencing to be possible, a method of dealing with potentially incorrect hits is required, but if reference bias is of concern the method should not involve filtering on the MAPQ field.
+We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs that can be more favourable.
+
+While the value of MAPQ is linked to correctness of results in general, it is not reliable measurement of uncertainty per read when mapping metagenomic reads to a reference of markers. Instead of using the MAPQ value to filter alignments before binning them, tools like EukDetect could instead filter on average MAPQ per detected taxon in conjunction with other measures of uncertainty of results.
 
 \newpage
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Information about mismatches
 

@@ -154,9 +154,9 @@ def do_one(ncbi, marker_to_taxon, read_length, base_error_rate, mutation_rate, w
 
 # removed $ from the end compared to marker_alignments version
 #other_MGCollapse_EPSP3-12_382_886_0:0:0_0:0:0_0
-eukprot_refdb_regex_taxon = "^[a-z]+-(.*_[a-z-]+(?:_.*)?)-[0-9]+at2759-[A-Z]\d|^[a-z]+-(.*)...Collapse_[^_]*|^()other_MGCollapse_[^_]*"
-eukprot_refdb_regex_marker = "^[a-z]+-.*_[a-z-]+(?:_.*)?-([0-9]+at2759)-[A-Z]\d|^[a-z]+-.*(..Collapse_[^_]*)|^(other_MGCollapse_[^_]*)"
-eukprot_refdb_regex_busco = "^([a-z]+-.*_[a-z-]+(?:_.*)?-([0-9]+at2759)-[A-Z]\d|^[a-z]+-.*..Collapse_[^_]*|^other_MGCollapse_[^_]*)"
+eukprot_refdb_regex_taxon = "^[a-z]+-(.*_[a-z-]+(?:_.*)?)-[0-9]+[ab]t2759-[A-Z]\d|^[a-z]+-(.*)...Collapse_[^_]*|^()other_MGCollapse_[^_]*"
+eukprot_refdb_regex_marker = "^[a-z]+-.*_[a-z-]+(?:_.*)?-([0-9]+[ab]t2759)-[A-Z]\d|^[a-z]+-.*(..Collapse_[^_]*)|^(other_MGCollapse_[^_]*)"
+eukprot_refdb_regex_busco = "^([a-z]+-.*_[a-z-]+(?:_.*)?-([0-9]+[ab]t2759)-[A-Z]\d|^[a-z]+-.*..Collapse_[^_]*|^other_MGCollapse_[^_]*)"
 
 pattern_taxon = re.compile(eukprot_refdb_regex_taxon)
 pattern_marker = re.compile(eukprot_refdb_regex_marker)

@@ -1,4 +1,4 @@
-all: paper.pdf unknownEuks/results-summary.tsv
+all: paper.pdf unknownEuks/results-summary.tsv refdbDoubled/doubled.fna.1.bt2
 
 refdb/ncbi_eukprot_met_arch_markers.fna:
 	mkdir refdb
@@ -10,6 +10,14 @@ refdbCrossValidation/nineTenth.fna.1.bt2: refdb/ncbi_eukprot_met_arch_markers.fn
 	mkdir -pv refdbCrossValidation
 	bash scripts/split_eukdb_reference.sh ./refdb/ ./refdbCrossValidation/oneTenth.fna ./refdbCrossValidation/oneTenthFolder ./refdbCrossValidation/nineTenth.fna
 	bowtie2-build ./refdbCrossValidation/nineTenth.fna ./refdbCrossValidation/nineTenth.fna
+
+refdbDoubled/doubled.fna.1.bt2: refdbCrossValidation/nineTenth.fna.1.bt2
+	mkdir -pv refdbDoubled
+	cat refdb/busco_taxid_link.txt > refdbDoubled/busco_taxid_link.txt
+	cat refdb/busco_taxid_link.txt | perl -pe 's/at2759/bt2759/g'  >> refdbDoubled/busco_taxid_link.txt
+	cat ./refdbCrossValidation/oneTenth.fna > refdbDoubled/doubled.fna
+	cat ./refdbCrossValidation/oneTenth.fna | perl -pe 's/at2759/bt2759/g' | perl -pe 's/^/A/ unless /^>/'  >> refdbDoubled/doubled.fna
+	bowtie2-build refdbDoubled/doubled.fna refdbDoubled/doubled.fna
 
 
 unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
@@ -33,6 +41,11 @@ tmp:
 tmp/wgsimMutationRate.json: tmp refdb/ncbi_eukprot_met_arch_markers.fna
 	python3 scripts/simulate_and_align.py --refdb-ncbi refdb/taxa.sqlite --refdb-marker-to-taxon-path refdb/busco_taxid_link.txt --reference refdb/ncbi_eukprot_met_arch_markers.fna --sim-source refdb/ncbi_eukprot_met_arch_markers.fna --dir tmp --verbose --read-lengths 100 --base-error-rates 0.0 --mutation-rates 0.0 0.001 0.01 0.025 0.05 0.075 0.1 0.125 0.15 0.175 0.2 > tmp/wgsimMutationRate.json
 
+tmpDoubled:
+	mkdir -pv tmpDoubled
+
+tmpDoubled/wgsimMutationRate.json: tmpDoubled refdbDoubled/doubled.fna.1.bt2
+	python3 scripts/simulate_and_align.py --refdb-ncbi refdb/taxa.sqlite --refdb-marker-to-taxon-path refdbDoubled/busco_taxid_link.txt --reference refdbDoubled/doubled.fna --sim-source refdbDoubled/doubled.fna --dir tmpDoubled --verbose --read-lengths 100 --base-error-rates 0.0 --mutation-rates 0.0 > tmpDoubled/wgsimMutationRate.json
 
 tmpLeaveOneOut:
 	mkdir -pv tmpLeaveOneOut

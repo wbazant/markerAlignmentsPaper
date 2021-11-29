@@ -29,6 +29,7 @@ We follow with an analysis of simulated reads. We simulate a large number of rea
 
 We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
 
+We also prepare an artificial reference index of 371 species from the reference, where each sequence is included twice - as original, and after prepending a single "A" base. This gives us a simple setup for studing mappings to redundant sequences.
 
 ## Results
 ### EukDetect given unknown species
@@ -69,8 +70,10 @@ To understand an effect of smaller differences between reference and signal, we 
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
 
+Simulating reads and mapping them to an artificial variant of the reference where 371 sequences are included twice shows that redundancy of reference sequences does not compromise same-species precision or same-species recall (both are 99.6%) but the reported MAPQ values are almost uniformly 0 or 1.
 
 \newpage
+
 
 ## Discussion
 

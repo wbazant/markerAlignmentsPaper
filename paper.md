@@ -639,5 +639,34 @@ We do it at the end and have separate thresholds for called taxa and vaguely ide
 
 This part is a combination of read counts, marker counts.
 
+
+## Other tools
+OPAL is a benchmark:
+https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1646-y
+
+
+MetaPhyler is like Metaphlan, but uses BLAST.
+
+TIPP inserts each read into a taxonomic tree and uses the insertion location to identify the taxonomic lineage of the read. The novel idea behind TIPP is that rather than using the single best alignment and placement for taxonomic identification, we use a collection of alignments and placements and consider statistical support for each alignment and placement.
+https://github.com/TeraTrees/TIPP
+
+k-mer based:
+CommonKmers
+https://github.com/dkoslicki/CommonKmers/
+
+https://academic.oup.com/bioinformatics/article/29/17/2096/239249
+quikr
+
+motu:
+https://motu-tool.org/
+40 universal marker genes
+
+focus:
+https://peerj.com/articles/425/
+https://onestopdataanalysis.com/metagenome-profile/
+k-mer method.
+Really good distinction between binning and profiling!
+
+
 \newpage
 #Bibliography

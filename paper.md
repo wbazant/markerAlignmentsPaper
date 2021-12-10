@@ -106,10 +106,54 @@ I've written these sections when the paper was going to be bigger. Perhaps there
 
 
 
+### Our method and software
+
+We have developed a software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes, with a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. 
+
+The tool is implemented in Python. It uses the `pysam` module to read alignment files, a `sqlite3` database to store alignments and build reports, and the MCL algorithm to convert pairwise similarities of markers and taxa into cluster assignments [@van2012using].
+
+We have also developed a Nextflow workflow, `wbazant/marker-alignments-nextflow`, which bundles file download, a run of `bowtie2` set up to produce multiple alignments per read, and processing the alignments. For processing MicrobiomeDB data, we have settled on a set of parameters equivalent to the following procedure:
+
+*Step 1. (Filter alignments on length)*
+
+Keep alignments that are at least 60 bases long regardless of their MAPQ.
+
+*Step 2. (Marker clusters)*
+
+For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa for which half or more of the markers are below average.
+
+*Step 3. (Taxon clusters)*
+
+Assign clusters to remaining taxa based on shared queries.
+
+*Step 4. (Unambiguous hits)*
+
+Return taxa which have at least two different reads aligned to at least two markers, and average alignment identity of at least 97%.
+
+*Step 5. (Strong ambiguous hits)*
+
+For each taxon cluster with no unambiguous hits that has least four markers and eight reads, join names of taxa in the cluster, prepend "?", and report as one result.
+
+
+### Our data
+Using the above workflow, we add eukaryotic detection analysis to our standard treatment of whole genome sequencing data on MicrobiomeDB [@oliveira2018microbiomedb], starting with Release 25 (2 Dec 2021). Below is a descri
+
+metagenomic samples of gut microbiome samples of developing children in DIABIMMUNE [@vatanen2016variation], as well as healthy humans from the Human Microbiome Project [@turnbaugh2007human]. 
+
+Our results from processing Human Microbiome Project data [@turnbaugh2007human] can be characterized broadly sensible but patchy overall. The most common taxa found are <i>Malassezia</i> and <i>Candida</i> fungi. Only 15 / 146 of stool samples report <i>S. cerevisiae </i>, an ubiquitous yeast that is likely to be present in the majority of the samples. This is in line with [@nash2017gut] who processed the same data through whole-genome alignments and report the sequencing depth use as insufficient to match sensitivity achieved by amplicon sequencing. Findings of eukaryotes that can potentially cause disease include a protozoan <i>Trichomonas tenax</i> in two oral samples, and 4/10 of samples from the subject ID 246515023 containing a fungus <i>Aspergillus fumigatus</i>.
+
+Data from the DIABIMMUNE study [@vatanen2016variation] lets us cross-check our method with results reported in the original EukDetect publication. Having processed the same 1154 samples, we agree on 122 data points, EukDetect has additional 14, and we have additional 97. Some of the additional results can be explained as higher sensitivity of our method - for example, a common taxon S. cerevisiae is reported 67 times by us and 31 by EukDetect. The additional complexity of our method when handling unknown species produces a few disagreements. In sample G78909, EukDetect reports <i>Penicillium nordicum</i>, while our method reports a novel <i>Penicillium</i>, and in sample G78500, EukDetect's reported <i>Kazachstania unispora</i> is rejected by our method as an off-target hit. In sample G80329, our method agrees with EukDetect about <i>Candida parapsilosis</i>, and reports an additional <i>C. albicans</i> - plausibly, because the reads assigned to the two species align to entirely different markers.
+
+Processing infant stool samples from the Preterm Infant Resistome study [@gibson2016developmental] uncovered that a sample corresponding SRA run ID SRR3132435 has been colonised by organisms from the <i>Mucor</i> genus, possibly between sample collection and sequencing. This is not reported by EukDetect despite over three thousand reads from the sample mapping to <i>Mucor</i> markers, because they all get filtered out by the MAPQ >=30 filter. Our method reports a presence of a species of <i>Mucor</i> most similar to <i>M. velutinosus</i>, <i>M. circinelloides</i>, and <i>M. ambiguus</i>. A second source for this result is STAT [@katz2021stat], assigning 0.34% of the reads assigned to order <i>Mucorales</i> on the basis of k-mer similarity.
 
 
 
+Our interpretation of this result is that the sample has gone mouldy between sample collection and sequencing. 
 
+All results are publicly viewable and downloadable on MicrobiomeDB. In addition, results and scripts used for the DIABIMMUNE comparison can be found in supplemental material. 
+
+
+All in all, we are satisfied with the above workflow and consider it a robust incremental improvement.
 
 
 
@@ -236,6 +280,8 @@ It is unfortunately really ad-hoc, how do I make it less ad-hoc?
 
 ```
 
+TODO say it's research software :) We show using identity and all alignments might be better, we have a PYthon package for exploring this kind of thing.
+
 ### `bowtie2`
 We set `bowtie2` to report multiple alignments per query. This lets us add structure on the level of markers:
 - count reads aligned multiply for each pair of markers as proxy for similarity
@@ -247,19 +293,7 @@ and similarly on the level of taxa.
 This lets us set up a sequence of filters similar to EukDetect without relying on the MAPQ field.
 
 
-*Filter 1. (Marker clusters)*
 
-For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa for which the majority of the markers are below average.
-
-*Filter 2. (Unambiguous hits)*
-
-Keep taxa which have at least two markers and four reads, and identity of at least 95%.
-
-*Filter 3. (Strong ambiguous hits)*
-
-In taxon clusters where no taxon has identity of at least 95%, keep taxa which have least four markers and eight reads. Report them together.
-
-This provides us with a sensitive and appropriately accurate approach to reporting presence of Eukaryotes in a large number of samples.
 
 ### `KMA`
 We set KMA to report all assembled fragments of reads for each template.

@@ -9,7 +9,9 @@ One challenging aspect of identifying reads in an environmental sample is potent
 
 A recent method aimed at solving this problem is EukDetect [@lind2021accurate], a tool based on read mapping which exploits the finding that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
 
-We use alignments of simulated reads to show that EukDetect is able to report approximately correct results when the sequenced material contains an unknown species or a non-reference strain of a species, but it is limited by its current approach to less confident alignments, specifically, its strategy to filter aligned reads on the MAPQ field, originally defined in the context of reference genomes like the human genome [@li2009sequence]. We exhibit strengths and limitations of filtering on MAPQ, and provide an interpretation of this field in the context of metagenomics. Finally, we suggest how programs like EukDetect could improve their result reporting such that an appearance of a species that differ from available references can be correctly interpreted.
+We use alignments of simulated reads to show that EukDetect is able to report approximately correct results when the sequenced material contains an unknown species or a non-reference strain of a species, but it is limited by its current approach to less confident alignments, specifically, its strategy to filter aligned reads on the MAPQ field, originally defined in the context of reference genomes like the human genome [@li2009sequence]. We exhibit strengths and limitations of filtering on MAPQ, and provide an interpretation of this field in the context of metagenomics.
+
+We then explore an alternative way of building taxonomic profiles from read mapping results, based around match identity and reconciling multiple alignments per query, that incorporates information about novel eukaryotes. Finally, we present a workflow based around those ideas which we implemented for MicrobiomeDB [@oliveira2018microbiomedb], compare our results to other analyses of the same data, and present a number of examples to demonstrate the potential of this approach.
 
 
 \newpage
@@ -83,32 +85,18 @@ Reads map less correctly as well as with low MAPQ in particularly congested area
 
 Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, reads either do not map or they correctly map with low MAPQ. Rejecting low MAPQ reads can not improve sensitivity in this case, and our data shows downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains.
 
-## Conclusion
+For MicrobiomeDB, we would like to produce taxonomic profiles for data where mapped reads do not in general come from organisms with genotypes identical to the known organisms that were assembled and annotated, so the MAPQ >= 30 filter does not meet our needs. Rather than only use "correctly placed" reads with high MAPQ values, we instead want to group reads by what they align to, position each observed source of reads in the sequence space, and obtain taxonomic profiles from there. To this end, we use match identity: fraction of agreeing bases between the read and where it aligned to. It takes value of 1 for perfect alignments, decreases as the distance between source and the references increases. It is not affected by match ambiguity, so in the case of an ambiguous alignment we can incorporate information from multiple references that are near.
 
-We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs - higher precision and recall for unknown species, but also an increased number of off-target hits.
-
-We conclude that while the value of MAPQ is linked to correctness of results in general, it is not a reliable measurement of uncertainty per read when mapping metagenomic reads to a reference of markers. Instead of using the MAPQ value to filter alignments before binning them, tools like EukDetect could filter on average MAPQ per detected taxon, or communicate the value in conjunction with other measures of uncertainty of results.
-
-\newpage
+We also see also other benefits to using multiple alignments per query. It tells us about match ambiguity, because the presence of secondary alignments distinguishes a single unknown organism from a presence of multiple organisms that is lost when multiple references compete for the best alignment. It also provides negative information - a secondary alignment indicates which sequence the read is not coming from.
 
 
 \newpage
-
-# Not in the paper
-I've written these sections when the paper was going to be bigger. Perhaps there's a whole paper in there ! :)
-
-\newpage
-
-
-
-
-
 
 
 
 ### Our method and software
 
-We have developed a software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes, with a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. 
+We have developed a software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes. It allows us to explore aforementioned ideas about query identity and multiple alignments per query, and realize a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. 
 
 The tool is implemented in Python. It uses the `pysam` module to read alignment files, a `sqlite3` database to store alignments and build reports, and the MCL algorithm to convert pairwise similarities of markers and taxa into cluster assignments [@van2012using].
 
@@ -136,27 +124,38 @@ For each taxon cluster with no unambiguous hits that has least four markers and 
 
 
 ### Our data
-Using the above workflow, we add eukaryotic detection analysis to our standard treatment of whole genome sequencing data on MicrobiomeDB [@oliveira2018microbiomedb], starting with Release 25 (2 Dec 2021). Below is a descri
+The above workflow lets us add eukaryotic detection analysis to our standard treatment of whole genome sequencing data on MicrobiomeDB [@oliveira2018microbiomedb]. Starting with Release 25 (2 Dec 2021), all whole genome sequencing data available on our site - 5113 samples - in Release 25 - is additionally profiled for presence of eukaryotes. 
 
-metagenomic samples of gut microbiome samples of developing children in DIABIMMUNE [@vatanen2016variation], as well as healthy humans from the Human Microbiome Project [@turnbaugh2007human]. 
-
-Our results from processing Human Microbiome Project data [@turnbaugh2007human] can be characterized broadly sensible but patchy overall. The most common taxa found are <i>Malassezia</i> and <i>Candida</i> fungi. Only 15 / 146 of stool samples report <i>S. cerevisiae </i>, an ubiquitous yeast that is likely to be present in the majority of the samples. This is in line with [@nash2017gut] who processed the same data through whole-genome alignments and report the sequencing depth use as insufficient to match sensitivity achieved by amplicon sequencing. Findings of eukaryotes that can potentially cause disease include a protozoan <i>Trichomonas tenax</i> in two oral samples, and 4/10 of samples from the subject ID 246515023 containing a fungus <i>Aspergillus fumigatus</i>.
+Our results from processing Human Microbiome Project data [@turnbaugh2007human] dovetail with [@nash2017gut] who compare the same stool samples sequenced with and without amplification of the fungal ITS2 region (WGS vs. ITS2). We find the same taxa as most common results: <i>Malassezia</i> and <i>Candida</i> fungi. We also agree with the conclusion that the sequencing depth of the samples was not sufficient to detect fungal taxa with sensitivity achieved by ITS2 sequencing - only 15 / 146 of stool samples report <i>S. cerevisiae </i>, an ubiquitous yeast that [@nash2017gut] find in the majority of the samples with ITS2, but only in a fraction of the samples with WGS. We nevertheless consider the results worth displaying: while the picture they draw is not complete, it contains enough information to generate hypotheses and further leads. Findings of eukaryotes that can potentially cause disease include a protozoan <i>Trichomonas tenax</i> in two oral samples, and 4 / 10 of samples from the subject ID 246515023 contain a disease-causing fungus <i>Aspergillus fumigatus</i>.
 
 Data from the DIABIMMUNE study [@vatanen2016variation] lets us cross-check our method with results reported in the original EukDetect publication. Having processed the same 1154 samples, we agree on 122 data points, EukDetect has additional 14, and we have additional 97. Some of the additional results can be explained as higher sensitivity of our method - for example, a common taxon S. cerevisiae is reported 67 times by us and 31 by EukDetect. The additional complexity of our method when handling unknown species produces a few disagreements. In sample G78909, EukDetect reports <i>Penicillium nordicum</i>, while our method reports a novel <i>Penicillium</i>, and in sample G78500, EukDetect's reported <i>Kazachstania unispora</i> is rejected by our method as an off-target hit. In sample G80329, our method agrees with EukDetect about <i>Candida parapsilosis</i>, and reports an additional <i>C. albicans</i> - plausibly, because the reads assigned to the two species align to entirely different markers.
 
 Processing infant stool samples from the Preterm Infant Resistome study [@gibson2016developmental] uncovered that a sample corresponding SRA run ID SRR3132435 has been colonised by organisms from the <i>Mucor</i> genus, possibly between sample collection and sequencing. This is not reported by EukDetect despite over three thousand reads from the sample mapping to <i>Mucor</i> markers, because they all get filtered out by the MAPQ >=30 filter. Our method reports a presence of a species of <i>Mucor</i> most similar to <i>M. velutinosus</i>, <i>M. circinelloides</i>, and <i>M. ambiguus</i>. A second source for this result is STAT [@katz2021stat], assigning 0.34% of the reads assigned to order <i>Mucorales</i> on the basis of k-mer similarity.
 
 
+\newpage
 
-Our interpretation of this result is that the sample has gone mouldy between sample collection and sequencing. 
+## Conclusion
 
-All results are publicly viewable and downloadable on MicrobiomeDB. In addition, results and scripts used for the DIABIMMUNE comparison can be found in supplemental material. 
+We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs - higher precision and recall for unknown species, but also an increased number of off-target hits.
+
+We conclude that while the value of MAPQ is linked to correctness of results in general, it is not a reliable measurement of uncertainty per read when mapping metagenomic reads to a reference of markers. Instead of using the MAPQ value to filter alignments before binning them, tools like EukDetect could filter on average MAPQ per detected taxon, or communicate the value in conjunction with other measures of uncertainty of results.
+
+We have developed a workflow for matching reads with a reference of marker genes based on an alternative filtering scheme using query identity and multiple alignments per query, which we consider a robust incremental improvement - we achieve higher sensitivity overall, better reporting of taxa not available in the reference, and enough reliability and throughput to let us proces thousands of samples for MicrobiomeDB.
 
 
-All in all, we are satisfied with the above workflow and consider it a robust incremental improvement.
+## Data availability
+All our software is publicly available under the MIT license: the Python package, (<i>github.com/wbazant/marker_alignments</i>), the Nextflow workflow (<i>github.com/wbazant/marker-alignments-nextflow</i>), and a mix of Python, Make, and Bash scripts to produce simulations, comparisons, and figures for this publication (<i>github.com/wbazant/markerAlignmentsPaper</i>). 
 
+All results are publicly viewable and downloadable on MicrobiomeDB. In addition, the simulation results and the DIABIMMUNE comparison can be found in supplemental material. 
 
+\newpage
+\newpage
+\newpage
+\newpage
+## Not in the paper
 
+\newpage
 ## Information about mismatches
 
 Assigning a read to the sequence it is most similar to is generally possible with `bowtie2`, and frequently very successful: reads simulated from 1908 / 3977 taxa map back with 100% precision as quoted before, and same-genus precision of mapping reads from a hold-out set is as high as 82%. 

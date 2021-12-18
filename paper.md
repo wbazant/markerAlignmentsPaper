@@ -13,6 +13,7 @@ We evaluate our workflow through comparing it with EukDetect on the DIABIMMUNE s
 
 
 ## Background
+
 Eukaryotes such as fungi and protists are commonly overlooked in studies of environments like the human gut [@laforest2018microbial]. They are present in quantities much smaller than bacteria and archea: for example, an analysis by [@nash2017gut] of gut samples of healthy adults from the Human Microbiome Project [@human2012structure] reports only 0.01% reads aligning to fungal genomes.
 
 Obtaining enough information to study presence of eukaryotes can be achieved by dedicating additional resources: for example sequencing samples with a dedicated protocol, like ITS2 sequencing for fungi [@pryce2003rapid].
@@ -21,14 +22,19 @@ When this is not available, additional in-silico techniques can be applied to wh
 
 Aligning reads to a reference of only some sequences from reference genomes keeps the reference size small, and can be an attractive way of taxonomic profiles. Appropriate treatment of alignments produced by sequenced material only accidentally similar to sequences by the reference, is a crucial requirement: if the incompleteness of the reference and potential for false positives is not taken into account, reported results can be absurd [@r2020use].
 
-A recent method aimed at solving this problem is EukDetect [@lind2021accurate], a tool based on read mapping which exploits the finding that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
 
-EukDetect's ability to reduce false positives in the results starts with the reference of markers provided with the tool, which spurious alignments of bacterial reads because of its construction: genes that are not present in bacteria, but are widely shared among eukaryotes. The tool also uses `bowtie2` [@langmead2012fast] which is a generally sensitive aligner, [@thankaswamy2017evaluation] and involves a number of filters on alignments. One filter which we will investigate at length in this publication is based on the reported MAPQ scores. In the SAM specification originating with `samtools` [@li2009sequence], which `bowtie2` follows, defines the MAPQ field in the context of short reads mapping to a mostly complete reference genome like the human genome, as an inverse logarithm of a probability estimate that the alignment is wrong: essentially, MAPQ is `bowtie2`'s measure of certainty about position of the alignment. EukDetect only keeps alignments where MAPQ >= 30. It is not the only tool which filters on MAPQ: MetaPhlAn [@segata2012metagenomic], a frequently used program for estimating taxonomic abundance also based on read mapping, also filters on MAPQ, with the default setting of MAPQ >= 5.
+Whole genome sequencing data plays an increasingly larger role in our open science resource, MicrobiomeDB [@oliveira2018microbiomedb], and we were interested in mining it for the presence of eukaryotes. Our data comes from relatively well-studied environments like the human body, but the sequencing depth from study to study, and grows at a rate that precludes individual analysis of samples - as of 2 Dec 2021, there are 5113 samples with WGS data available. Our goals were an analysis which limits false positives, does not miss any large signals, and produces good guesses for weaker signals. 
 
-Whole genome sequencing data plays an increasingly larger role in our open science resource, MicrobiomeDB [@oliveira2018microbiomedb], and we were interested in mining it for the presence of eukaryotes. Our data comes from relatively well-studied environments like the human body, but the sequencing depth from study to study, and grows at a rate that precludes individual analysis of samples - as of 2 Dec 2021, there are 5113 samples with WGS data available. Our goals were an analysis which limits false positives, does not miss any large signals, and produces good guesses for weaker signals. EukDetect served us as a starting point as a tool based on read mapping that promised high sensitivity, and we wanted to understand how it reports various kinds of signals.
+A recent method aimed at solving this problem is EukDetect [@lind2021accurate], a tool based on read mapping which exploits the finding that using a specially prepared reference of sequences only typically present in eukaryotes can remove spuriously aligning bacterial reads. However, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication. 
+
+
+EukDetect's ability to reduce false positives in the results starts with the reference of markers provided with the tool, which limits spurious alignments of bacterial reads because of its construction: genes that are not present in bacteria, but are widely shared among eukaryotes. The tool also uses `bowtie2` [@langmead2012fast] which is a generally sensitive aligner, [@thankaswamy2017evaluation] and involves a number of filters on alignments. One filter which we will investigate at length in this publication is based on the reported MAPQ scores - EukDetect only keeps alignments where MAPQ >= 30. It is not the only tool which filters on MAPQ: MetaPhlAn [@segata2012metagenomic], a frequently used program for estimating taxonomic abundance also based on read mapping, also filters on MAPQ, with the default setting of MAPQ >= 5.
+
+EukDetect's reference of marker genes consists of Eukaryote-specific BUSCOs from OrthoDB [@kriventseva2019orthodb]. Formally, it is treated by `bowtie2` as if each marker was a contig in a reference genome, but we have found it helpful to think of the markers as orientation points in the space of sequences. A read in a sequenced environmental sample need not come from one of the points in the reference to align to its sequence. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal]. Still, we can tell where the read is from when its source is near a known point - since naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural], this is not unlikely. One property of alignments which relates to distance in the sequence space is match identity, calculated as a fraction of bases that agree between the aligned read and the sequence it aligns to.
+
+The MAPQ values of alignments lack a similar geometric interpretation: the SAM specification [@li2009sequence], which `bowtie2` follows, defines MAPQ as an inverse logarithm of a probability that the alignment is wrong, but this is an estimate in the context of mapping reads to a reference genome like the human genome. Aligners differ in how they calculate it [@qcfail2016mapq]: `bowtie2` estimates it using the score it gives to the alignment, score of the next best alignment, and the read's quality scores [@urban2014how]. When reporting more alignments than the best one for each read, `bowtie2` describes the MAPQ scores it reports as not meaningful.
 
 In our evaluation of the tool, we discovered that filtering on MAPQ has fairly complex effects. We would like to share our understanding of what it does, and a MicrobiomeDB workflow based on EukDetect's reference of marker genes that we have settled on.
-
 
 \newpage
 
@@ -43,16 +49,25 @@ We approximate the possibility an unknown species being present in the sequenced
 
 First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. This lets us establish how well EukDetect currently works when given unknown species and identify the MAPQ >= 30 filter as responsible for not passing enough information through. We also try a modification to EukDetect to instead filter on MAPQ >= 5 used by default in MetaPhlAn.
 
-
 We follow with an analysis of simulated reads. We simulate a large number of reads and align them. For each aligned read, we record correctness of the match based on its source taxon with the taxon it aligned to as well as properties of the alignment (identity, MAPQ). Then lets us infer trends between reported properties of alignments and two measures of their correctness, namely precision: a proportion of correctly mapping reads among reads that map to any reference, and recall: a proportion of sampled reads that correctly map, similarly to how the values are used by the OPAL framework [@meyer2019assessing]. For reads that do not align back to the BUSCO they are sampled from, we annotate the mismatch with a level of the lowest common taxon containing source and match, with help of the ETE toolkit [@huerta2016ete ] using the NCBI database version dated 2020/1/14 packaged with EukDetect.
 
 We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
 
-Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA  [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
+Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
+
+To summarize, here is a list of different set-ups:
+1. Simulate samples with an unknown taxon at 0.1 coverage, run EukDetect
+2. Same but modify EukDetect to remove MAPQ filter
+3. Same but modify EukDetect to set MAPQ filter to 5
+4. Simulate a read from reference, align back to the reference
+5. Simulate a read from hold-out set, align to the remaining reference
+6. Simulate a mutated read from reference, align back to the reference
+7. Simulate a read from reference, align back to duplicated reference
+
+For 1. - 3., we simulate and count whole species. For 4. - 7. we simulate reads, and count alignments.
 
 ## Results
 ### EukDetect given unknown species
-
 
 Running EukDetect on each of the samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set. 17 are one taxon of a different genus, and 26 are more than one taxon. 
 
@@ -96,7 +111,7 @@ Simulating reads and mapping them to an variant of the reference with 371 sequen
 
 ## Discussion
 
-As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads. We can better explain this variability if we re-cast the task of identifying a source of reads given metagenomic reads an a reference as a nearest neighbour search in a space of sequences. A reference consisting of cDNA sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant. 
+As shown above, precision with which metagenomic reads can be mapped varies based on their source taxon, and the effects of the MAPQ >= 30 filter vary based on the source of the reads. We can better explain this variability if we re-cast the task of identifying a source of reads given metagenomic reads and a reference as a nearest neighbour search in a space of sequences. A reference consisting of cDNA sequences from multiple species is different from a reference genome like the human genome, because naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural]. Since MAPQ is a measure of certainty about alignment position [@li2009sequence], we can expect it to be low for reads whose nearest neighbour is either ambiguous or distant.
 
 Reads map less correctly as well as with low MAPQ in particularly congested areas of sequence space, because a read coming from a segment shared between sequences does not contain enough information to assign it to the source. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses. In our opinion, rejecting ambiguously mapping reads can be a sensible strategy when there are plenty of other reads to use, but making use of ambiguous mappings can improve detection ability of taxonomic classifiers that focus on eukaryotes.
 
@@ -113,7 +128,7 @@ We also see also other benefits to using multiple alignments per query. It tells
 
 ### Our method and software
 
-We have developed a software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes. It allows us to explore aforementioned ideas about query identity and multiple alignments per query, and realize a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. 
+In addition to the software for running simulations and making figures for this publication we have developed a software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes. It allows us to explore aforementioned ideas about query identity and multiple alignments per query, and realize a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. 
 
 The tool is implemented in Python. It uses the `pysam` module to read alignment files, a `sqlite3` database to store alignments and build reports, and the MCL algorithm to convert pairwise similarities of markers and taxa into cluster assignments [@van2012using].
 

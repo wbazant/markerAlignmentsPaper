@@ -66,7 +66,7 @@ We do this in three contexts: reads sampled from the whole reference and then ma
 
 Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
 
-To summarize, here is a list of different set-ups:
+To summarize, here is a list of different experiments:
 1. Simulate samples with an unknown taxon at 0.1 coverage, run EukDetect 
 2. Use same samples, run `bowtie2`, and only use EukDetect's two filters (MAPQ >= 30, and "four reads in four markers")
 3. Use same samples, run EukDetect modified to use MAPQ >= 5 instead of MAPQ >=30
@@ -75,7 +75,7 @@ To summarize, here is a list of different set-ups:
 6. Simulate a mutated read from reference, align back to the reference
 7. Simulate a read from reference, align back to duplicated reference
 
-For 1. - 3., we simulate presence and count detection of species in samples. For 4. - 7. we simulate reads from species and count correctness and MAPQ of alignments.
+For 1. - 3., we simulate presence and count detection of species in samples. For 4. - 7. we simulate reads and check for agreement between source species and species of matched marker for each read, as well as MAPQ of alignments.
 
 ## Results
 
@@ -176,11 +176,11 @@ Processing infant stool samples from the Preterm Infant Resistome study [@gibson
 
 ## Conclusion
 
-We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species. The trade-offs offered by the filter are very attractive when it is applied to reads from source taxa that are highly similar to exactly one taxon in the reference, but it does not universally improve results. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs - higher precision and recall for unknown species, but also an increased number of off-target hits.
+We have shown that the MAPQ >= 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species, and demonstrated why: MAPQ values are typically high for unambiguous matches, and low when the source species differs from anything in the reference or if the reference is redundant. Changing MAPQ >= 30 to a more permissive value like MAPQ >= 5 offers slightly different trade-offs - higher precision and recall for unknown species, but also an increased number of off-target hits, and it is not unambiguously an improvement.
 
-We conclude that while the value of MAPQ is linked to correctness of results in general, it is not a reliable measurement of uncertainty per read when mapping metagenomic reads to a reference of markers. Instead of using the MAPQ value to filter alignments before binning them, tools like EukDetect could filter on average MAPQ per detected taxon, or communicate the value in conjunction with other measures of uncertainty of results.
+We have proposed an alternative strategy to filter results, based on match identity and incorporating multiple alignments, and developed tooling around this strategy - a Python package `marker_alignments` to produce taxonomic profiles using an input of alignments to markers, and a Nextflow workflow `wbazant/marker-alignments-nextflow` that bundles it with `bowtie2` and EukDetect's reference
 
-We have developed a workflow for matching reads with a reference of marker genes based on an alternative filtering scheme using query identity and multiple alignments per query, which we consider a robust incremental improvement - we achieve higher sensitivity overall, better reporting of taxa not available in the reference, and enough reliability and throughput to let us proces thousands of samples for MicrobiomeDB.
+ We have also provided a comparison of data processed by our method with several other sources, demonstrating a robust incremental improvement - we achieve higher sensitivity overall, we are able to report of taxa not available in the reference, and enough reliability and throughput to let us proces thousands of samples for MicrobiomeDB.
 
 
 ## Data availability

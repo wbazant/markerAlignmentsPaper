@@ -3,14 +3,17 @@
 by Wojtek, Ann, Kathryn, Dan, possibly others
 
 ## Abstract
-Eukaryotes such as fungi and protists are frequently present in microbial communities. In environments like the human body, their quantities are very small compared to bacteria and archea except in cases of severe disease. This means identifying them from whole-genome sequencing reads can involve extensive manual curation of results: there may not be enough signal to make confident assignments based on k-mer similarity, and a straightforward approach of aligning reads to all known eukaryotic genomes produces false positives from bacterial reads aligning to spurious contigs. EukDetect is a recently published taxonomic profiling tool based on read mapping that avoids spuriously aligning bacterial reads by using a reference of marker genes - a specially prepared collection of sequences which can be trusted to only be present in eukaryotes. However, the possibility of a presence of an unknown eukaryote is not taken into account.
 
-The first part of this publication focuses on evaluating EukDetect's method. Building a taxonomic profile through aligning reads to marker genes corresponds to positioning sources of reads in the space of sequences, so we use simulations from the reference to explore various configurations. The performance is uneven: the tool is frequently very accurate and sensitive, but for some sources of reads it can also work less well. Our simulations show that this is due to the tool's strategy to filter aligned reads on the MAPQ value of alignments, and that this value is lower for sources the most similar marker is either fairly dissimilar, or ambiguous. Mapping reads to a reference of markers is not inherently limited in this way - we simulate cases of the sequenced material contains an unknown species or a non-reference strain of a species, and show a high degree of approximate correctness, which is partially lost when the MAPQ filter is applied.
+### Background
+Eukaryotes such as fungi and protists frequently accompany bacteria and archea in microbial communities, but their presence is difficult to study with shotgun sequencing techniques, because they are drowned out by the prokaryotic signal. EukDetect is a recently published eukaryotic detection tool that overcomes this difficulty thanks to a reference of eukaryote-specific marker genes. However, EukDetect does not account for the possibility of a presence of an unknown eukaryote.
 
-The remainder of this publication describes our Python tool, `marker_alignments`, which we developed to assess various ways of producing taxonomic profiles from alignments to EukDetect's reference of markers, and an alternative workflow we have chosen for identifying eukaryotes in whole genome sequencing data of human samples in our open science resource, MicrobiomeDB. We outline our strategy based on incorporating all available alignments for each read and comparing average match identity per marker, and separate thresholds for clear trace signals and strong ambiguous hits. 
+### Results
+We demonstrate through simulation that EukDetect's ability to report on species not in its reference is compromised by its inclusion of MAPQ >= 30 filter on the alignments. We also show that filtering on MAPQ is only attractive when a source taxon is unambiguously identifiable with a single reference entry, and that detecting novel eukaryotes (non-reference species and strains) is in general possible. 
 
-We evaluate our workflow through comparing it with EukDetect on the DIABIMMUNE study, with an analysis of stool samples from the Human MicrobiomeProject based on whole genome alignments, and back up some of our reports of novel eukaryotes with profiles based on k-mer data. This lets us demonstrate our workflow's suitability for broad screens of metagenomic data to identify samples where eukaryotes are present.
+We then describe an alternative filtering strategy based on incorporating multiple alignments per read and comparing them on match identity, and a workflow that we have chosen for identifying eukaryotes in whole genome sequencing data of human samples in our open science resource, MicrobiomeDB. We compare this workflow's performance with EukDetect on the DIABIMMUNE study, with an analysis of stool samples from the Human MicrobiomeProject based on whole genome alignments, and we back up some of our reports of novel eukaryotes with profiles based on k-mer data.
 
+### Conclusion
+MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. The workflow we developed around an alternative filtering strategy is suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open data resource, MicrobiomeDB.
 
 ## Background
 
@@ -129,8 +132,6 @@ For MicrobiomeDB, we would like to produce taxonomic profiles for data where map
 We also see also other benefits to using multiple alignments per query. It tells us about match ambiguity, because the presence of secondary alignments distinguishes a single unknown organism from a presence of multiple organisms that is lost when multiple references compete for the best alignment. It also provides negative information - a secondary alignment indicates which sequence the read is not coming from.
 
 
-\newpage
-
 
 
 ### Our method and software
@@ -195,6 +196,16 @@ All results are publicly viewable and downloadable on MicrobiomeDB. In addition,
 ## Not in the paper
 
 \newpage
+
+## Abstract (old)
+Eukaryotes such as fungi and protists are frequently present in microbial communities. In environments like the human body, their quantities are very small compared to bacteria and archea except in cases of severe disease. This means identifying them from whole-genome sequencing reads can involve extensive manual curation of results: there may not be enough signal to make confident assignments based on k-mer similarity, and a straightforward approach of aligning reads to all known eukaryotic genomes produces false positives from bacterial reads aligning to spurious contigs. EukDetect is a recently published taxonomic profiling tool based on read mapping that avoids spuriously aligning bacterial reads by using a reference of marker genes - a specially prepared collection of sequences which can be trusted to only be present in eukaryotes. However, the possibility of a presence of an unknown eukaryote is not taken into account.
+
+The first part of this publication focuses on evaluating EukDetect's method. Building a taxonomic profile through aligning reads to marker genes corresponds to positioning sources of reads in the space of sequences, so we use simulations from the reference to explore various configurations. The performance is uneven: the tool is frequently very accurate and sensitive, but for some sources of reads it can also work less well. Our simulations show that this is due to the tool's strategy to filter aligned reads on the MAPQ value of alignments, and that this value is lower for sources the most similar marker is either fairly dissimilar, or ambiguous. Mapping reads to a reference of markers is not inherently limited in this way - we simulate cases of the sequenced material contains an unknown species or a non-reference strain of a species, and show a high degree of approximate correctness, which is partially lost when the MAPQ filter is applied.
+
+The remainder of this publication describes our Python tool, `marker_alignments`, which we developed to assess various ways of producing taxonomic profiles from alignments to EukDetect's reference of markers, and an alternative workflow we have chosen for identifying eukaryotes in whole genome sequencing data of human samples in our open science resource, MicrobiomeDB. We outline our strategy based on incorporating all available alignments for each read and comparing average match identity per marker, and separate thresholds for clear trace signals and strong ambiguous hits. 
+
+We evaluate our workflow through comparing it with EukDetect on the DIABIMMUNE study, with an analysis of stool samples from the Human MicrobiomeProject based on whole genome alignments, and back up some of our reports of novel eukaryotes with profiles based on k-mer data. This lets us demonstrate our workflow's suitability for broad screens of metagenomic data to identify samples where eukaryotes are present.
+
 ## Information about mismatches
 
 Assigning a read to the sequence it is most similar to is generally possible with `bowtie2`, and frequently very successful: reads simulated from 1908 / 3977 taxa map back with 100% precision as quoted before, and same-genus precision of mapping reads from a hold-out set is as high as 82%. 

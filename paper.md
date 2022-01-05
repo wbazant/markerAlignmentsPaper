@@ -53,44 +53,22 @@ The MAPQ values of alignments lack a similar geometric interpretation: the SAM s
 
 \newpage
 
-## Methodology
-
-Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs from OrthoDB [@kriventseva2019orthodb], and use `bowtie2` [@langmead2012fast] to align them back to the reference.
-
-When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified.
-
-We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set. Skipping any inputs where `wgsim` considers too fragmented yields 338 species to be sampled from.
-
-First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. We run EukDetect to establish how well the tool currently works when given unknown species. Then we run `bowtie2` and apply the MAPQ >= 30 filter, as well as the "four reads in two markers" filter. We also try a modification to EukDetect to instead filter on MAPQ >= 5 used by default in MetaPhlAn.
-
-We follow with an analysis of simulated reads. We simulate a large number of reads and align them. For each aligned read, we record correctness of the match based on its source taxon with the taxon it aligned to as well as properties of the alignment (identity, MAPQ). Then lets us infer trends between reported properties of alignments and two measures of their correctness, namely precision: a proportion of correctly mapping reads among reads that map to any reference, and recall: a proportion of sampled reads that correctly map, similarly to how the values are used by the OPAL framework [@meyer2019assessing]. For reads that do not align back to the BUSCO they are sampled from, we annotate the mismatch with a level of the lowest common taxon containing source and match, with help of the ETE toolkit [@huerta2016ete ] using the NCBI database version dated 2020/1/14 packaged with EukDetect.
-
-We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
-
-Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
-
-To summarize, here is a list of different experiments:
-1. Simulate samples with an unknown taxon at 0.1 coverage, run EukDetect 
-2. Use same samples, run `bowtie2`, and only use EukDetect's two filters (MAPQ >= 30, and "four reads in four markers")
-3. Use same samples, run EukDetect modified to use MAPQ >= 5 instead of MAPQ >=30
-4. Simulate a read from reference, align back to the reference
-5. Simulate a read from hold-out set, align to the remaining reference
-6. Simulate a mutated read from reference, align back to the reference
-7. Simulate a read from reference, align back to duplicated reference
-
-For 1. - 3., we simulate presence and count detection of species in samples. For 4. - 7. we simulate reads and check for agreement between source species and species of matched marker for each read, as well as MAPQ of alignments.
 
 ## Results
 
-The first three experiments show EukDetect's limited capacity to sensibly report on species not in its reference is related to its MAPQ filter. The next four experiments establish the baseline success rate of identifying simulated reads in various circumstances, and show that the effects of filtering on the MAPQ property are non-uniform and not always beneficial.
 
 ### EukDetect given unknown species
 
-Running EukDetect on each of the 338 samples produces an empty list of results for 219 samples, and some results for 119 samples. Of these, 76 are one taxon of the same genus as the source species in the hold-out set. 17 are one taxon of a different genus, and 26 are more than one taxon. 
+Splitting out a hold-out set from EukDetect's reference and preparing 338 samples each with one unknown species at 0.1 coverage lets us establish that EukDetect does not show a consistent behaviour when faced with species not in its reference - we get an empty list of results for 219 samples, 76 of one taxon of the same genus as the source species in the hold-out set, 17 of one taxon of a different genus, and 26 of more than one taxon. 
 
-Running `bowtie2` and keeping samples which have any reads mapped - that is, applying no filtering - reports results for 301 of the samples. We investigate it by applying some of EukDetect's filters in turn. The first filter based on query length has no effect as we are using simulated reads. The second filter applied by EukDetect, based on the MAPQ field, reduces the number of samples with any mapped reads to just 156, additionally requiring reads mapping to two different markers in a taxon narrows down the list further to 133, and also requiring four reads fully accounts for all missing results. Skipping the MAPQ >= 30 field and only requiring two markers and four reads in a taxon reports results for 206 samples. This shows that the choice of filtering rules is key to sensitive detection of organisms using mapped reads.
+We expose which parts of EukDetect's functionality influence this behaviour the most by running `bowtie2`, applying some of its filters ourselves, and counting non-empty results among the 338 samples:
+1. No filtering: 301
+2. MAPQ >= 30: 156
+3. MAPQ >= 30, two markers: 133
+4. MAPQ >= 30, two markers, four reads: 119 (same as all of EukDetect)
+5. two markers, four reads: 206
 
-Re-running EukDetect modified to filter on MAPQ >= 5 reports some results for 160 values: 78 are one taxon of the same genus, 13 are one taxon of a different genus, and 69 are more than one taxon.
+Re-running EukDetect modified to filter on MAPQ >= 5 shows that a more desired behaviour can not be obtained by simply tweaking the filter - we see an empty list of results for 178 samples, 78 of one taxon of the same genus, 13 of one taxon of a different genus, and 69 of more than one taxon.
 
 \newpage
 
@@ -183,6 +161,34 @@ We have proposed an alternative strategy to filter results, based on match ident
 
  We have also provided a comparison of data processed by our method with several other sources, demonstrating a robust incremental improvement - we achieve higher sensitivity overall, we are able to report of taxa not available in the reference, and enough reliability and throughput to let us proces thousands of samples for MicrobiomeDB.
 
+## Methods
+- preparing a hold-out set
+- concluding the MAPQ filter is to blame
+
+Methods of differentiating species through their sequences can be tested in silico through simulation [@hovhannisyan2020crossmapper]. We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs from OrthoDB [@kriventseva2019orthodb], and use `bowtie2` [@langmead2012fast] to align them back to the reference.
+
+When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified.
+
+We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set. Skipping any inputs where `wgsim` considers too fragmented yields 338 species to be sampled from.
+
+First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. We run EukDetect to establish how well the tool currently works when given unknown species. Then we run `bowtie2` and apply the MAPQ >= 30 filter, as well as the "four reads in two markers" filter. We also try a modification to EukDetect to instead filter on MAPQ >= 5 used by default in MetaPhlAn.
+
+We follow with an analysis of simulated reads. We simulate a large number of reads and align them. For each aligned read, we record correctness of the match based on its source taxon with the taxon it aligned to as well as properties of the alignment (identity, MAPQ). Then lets us infer trends between reported properties of alignments and two measures of their correctness, namely precision: a proportion of correctly mapping reads among reads that map to any reference, and recall: a proportion of sampled reads that correctly map, similarly to how the values are used by the OPAL framework [@meyer2019assessing]. For reads that do not align back to the BUSCO they are sampled from, we annotate the mismatch with a level of the lowest common taxon containing source and match, with help of the ETE toolkit [@huerta2016ete ] using the NCBI database version dated 2020/1/14 packaged with EukDetect.
+
+We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
+
+Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
+
+To summarize, here is a list of different experiments:
+1. Simulate samples from a hold-out set with an unknown taxon at 0.1 coverage, run EukDetect 
+2. Use same samples, run `bowtie2`, and only use EukDetect's two filters (MAPQ >= 30, and "four reads in four markers")
+3. Use same samples, run EukDetect modified to use MAPQ >= 5 instead of MAPQ >=30
+4. Simulate a read from reference, align back to the reference
+5. Simulate a read from hold-out set, align to the remaining reference
+6. Simulate a mutated read from reference, align back to the reference
+7. Simulate a read from reference, align back to duplicated reference
+
+For 1. - 3., we simulate presence and count detection of species in samples. For 4. - 7. we simulate reads and check for agreement between source species and species of matched marker for each read, as well as MAPQ of alignments.
 
 ## Data availability
 All our software is publicly available under the MIT license: the Python package, (*github.com/wbazant/marker_alignments*), the Nextflow workflow (*github.com/wbazant/marker-alignments-nextflow*), and a mix of Python, Make, and Bash scripts to produce simulations, comparisons, and figures for this publication (*github.com/wbazant/markerAlignmentsPaper*). 
@@ -197,6 +203,11 @@ All results are publicly viewable and downloadable on MicrobiomeDB. In addition,
 
 \newpage
 
+## Results (old)
+
+The first three experiments show EukDetect's limited capacity to sensibly report on species not in its reference is related to its MAPQ filter. The next four experiments establish the baseline success rate of identifying simulated reads in various circumstances, and show that the effects of filtering on the MAPQ property are non-uniform and not always beneficial.
+ ...
+We investigate it by applying some of EukDetect's filters in turn. The first filter based on query length has no effect as we are using simulated reads. The second filter applied by EukDetect, based on the MAPQ field, reduces the number of samples with any mapped reads to just 156, additionally requiring reads mapping to two different markers in a taxon narrows down the list further to 133, and also requiring four reads fully accounts for all missing results. Skipping the MAPQ >= 30 field and only requiring two markers and four reads in a taxon reports results for 206 samples. This shows that the choice of filtering rules is key to sensitive detection of organisms using mapped reads.
 ## Abstract (old)
 Eukaryotes such as fungi and protists are frequently present in microbial communities. In environments like the human body, their quantities are very small compared to bacteria and archea except in cases of severe disease. This means identifying them from whole-genome sequencing reads can involve extensive manual curation of results: there may not be enough signal to make confident assignments based on k-mer similarity, and a straightforward approach of aligning reads to all known eukaryotic genomes produces false positives from bacterial reads aligning to spurious contigs. EukDetect is a recently published taxonomic profiling tool based on read mapping that avoids spuriously aligning bacterial reads by using a reference of marker genes - a specially prepared collection of sequences which can be trusted to only be present in eukaryotes. However, the possibility of a presence of an unknown eukaryote is not taken into account.
 

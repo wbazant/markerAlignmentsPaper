@@ -5,15 +5,18 @@ by Wojtek, Ann, Kathryn, Dan, possibly others
 ## Abstract
 
 ### Background
-Eukaryotes such as fungi and protists frequently accompany bacteria and archea in microbial communities, but their presence is difficult to study with shotgun sequencing techniques, because they are drowned out by the prokaryotic signal. EukDetect is a recently published eukaryotic detection tool that overcomes this difficulty thanks to a reference of eukaryote-specific marker genes. However, EukDetect does not account for the possibility of a presence of an unknown eukaryote.
+Eukaryotes such as fungi and protists frequently accompany bacteria and archea in microbial communities, but their presence is difficult to study with shotgun sequencing techniques, because they are drowned out by the prokaryotic signal. EukDetect is a recently published eukaryotic detection tool that overcomes this difficulty thanks to a reference of eukaryote-specific marker genes. However, EukDetect does not account for the possibility of presence of an unknown eukaryote.
 
 ### Results
-We demonstrate through simulation that EukDetect's ability to report on species not in its reference is compromised by its inclusion of MAPQ >= 30 filter on the alignments. We also show that filtering on MAPQ is only attractive when a source taxon is unambiguously identifiable with a single reference entry, and that detecting novel eukaryotes (non-reference species and strains) is in general possible. 
+We present a method of finding eukaryotes in shotgun sequencing samples based on EukDetect that we have chosen for our open science resource, MicrobiomeDB. The main modifications are using multiple alignments for each read and relying on match identity instead of MAPQ values.
 
-We then describe an alternative filtering strategy based on incorporating multiple alignments per read and comparing them on match identity, and a workflow that we have chosen for identifying eukaryotes in whole genome sequencing data of human samples in our open science resource, MicrobiomeDB. We compare this workflow's performance with EukDetect on the DIABIMMUNE study, with an analysis of stool samples from the Human MicrobiomeProject based on whole genome alignments, and we back up some of our reports of novel eukaryotes with profiles based on k-mer data.
+We demonstrate that our method is in general capable of reporting novel eukaryotes, but EukDetect's ability to do the same is compromised by its inclusion of MAPQ >= 30 filter on the alignments. We also show that in mapping metagenomic reads, high MAPQ values do not imply a correct match, but rather an unambiguous one.
+
+Additionally, our method shows improved sensitivity when compared with EukDetect on the DIABIMMUNE study, and the results are in broad agreement with an analysis of stool samples from the Human MicrobiomeProject. We also back up some of our reports of novel eukaryotes with taxonomic profiles constructed from k-mers.
 
 ### Conclusion
-MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. The workflow we developed around an alternative filtering strategy is suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open data resource, MicrobiomeDB.
+
+MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. With our alternative filtering strategy, read mapping becomes suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open data resource, MicrobiomeDB.
 
 ## Background
 
@@ -56,6 +59,28 @@ The MAPQ values of alignments lack a similar geometric interpretation: the SAM s
 
 ## Results
 
+### Our method
+For processing MicrobiomeDB data, we run `bowtie2` set to report all alignments, and follow the following procedure to convert alignments into a taxonomic profile:
+
+*Step 1. (Filter alignments on length)*
+
+Keep alignments that are at least 60 bases long regardless of their MAPQ.
+
+*Step 2. (Marker clusters)*
+
+Cluster markers using the MCL algorithm with a number of shared queries for each pair of markers. For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa for which half or more of the markers are below average.
+
+*Step 3. (Taxon clusters)*
+
+Assign clusters to remaining taxa based on shared queries.
+
+*Step 4. (Unambiguous hits)*
+
+Return taxa which have at least two different reads aligned to at least two markers, and average alignment identity of at least 97%.
+
+*Step 5. (Strong ambiguous hits)*
+
+For each taxon cluster with no unambiguous hits that has least four markers and eight reads, join names of taxa in the cluster, prepend "?", and report as one result.
 
 ### EukDetect given unknown species
 
@@ -68,7 +93,7 @@ We expose which parts of EukDetect's functionality influence this behaviour the 
 4. MAPQ >= 30, two markers, four reads: 119 (same as all of EukDetect)
 5. two markers, four reads: 206
 
-Re-running EukDetect modified to filter on MAPQ >= 5 shows that a more desired behaviour can not be obtained by simply tweaking the filter - we see an empty list of results for 178 samples, 78 of one taxon of the same genus, 13 of one taxon of a different genus, and 69 of more than one taxon.
+Re-running EukDetect modified to filter on MAPQ >= 5 leads to fewer instances a taxon is skipped, but more instances one taxon is reported as many - we see an empty list of results for 178 samples, 78 of one taxon of the same genus, 13 of one taxon of a different genus, and 69 of more than one taxon.
 
 \newpage
 
@@ -118,27 +143,8 @@ In addition to the software for running simulations and making figures for this 
 
 The tool is implemented in Python. It uses the `pysam` module to read alignment files, a `sqlite3` database to store alignments and build reports, and the MCL algorithm to convert pairwise similarities of markers and taxa into cluster assignments [@van2012using].
 
-We have also developed a Nextflow workflow, `wbazant/marker-alignments-nextflow`, which bundles file download, a run of `bowtie2` set up to produce multiple alignments per read, and processing the alignments. For processing MicrobiomeDB data, we have settled on a set of parameters equivalent to the following procedure:
+We have also developed a Nextflow workflow, `wbazant/marker-alignments-nextflow`, which bundles file download, a run of `bowtie2` set up to produce multiple alignments per read, and processing the alignments.
 
-*Step 1. (Filter alignments on length)*
-
-Keep alignments that are at least 60 bases long regardless of their MAPQ.
-
-*Step 2. (Marker clusters)*
-
-For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa for which half or more of the markers are below average.
-
-*Step 3. (Taxon clusters)*
-
-Assign clusters to remaining taxa based on shared queries.
-
-*Step 4. (Unambiguous hits)*
-
-Return taxa which have at least two different reads aligned to at least two markers, and average alignment identity of at least 97%.
-
-*Step 5. (Strong ambiguous hits)*
-
-For each taxon cluster with no unambiguous hits that has least four markers and eight reads, join names of taxa in the cluster, prepend "?", and report as one result.
 
 
 ### Our data

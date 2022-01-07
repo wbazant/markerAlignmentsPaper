@@ -68,19 +68,18 @@ Keep alignments that are at least 60 bases long regardless of their MAPQ.
 
 *Step 2. (Marker clusters)*
 
-Cluster markers using the MCL algorithm with a number of shared queries for each pair of markers. For each taxon, classify each marker as "at least average" or "below average" based on identity in its marker cluster. Reject taxa for which half or more of the markers are below average.
+Cluster markers using the MCL algorithm with a number of multiply aligned reads for each pair of markers. Compute mean match identity for each marker cluster as well as for each individual marker, and use the values to classify each marker as "at least average in its marker cluster" or "below average in its marker cluster".
 
 *Step 3. (Taxon clusters)*
-
-Assign clusters to remaining taxa based on shared queries.
+Reject taxa for which half or more of the markers are below average in their marker clusters. Cluster the remaining taxa using the MCL algorithm with a number of multiply aligned reads for each pair of taxa.
 
 *Step 4. (Unambiguous hits)*
 
-Return taxa which have at least two different reads aligned to at least two markers, and average alignment identity of at least 97%.
+Report taxa which have at least two different reads aligned to at least two markers, and average alignment identity of at least 97%. Reject all other taxa in their taxon clusters.
 
 *Step 5. (Strong ambiguous hits)*
 
-For each taxon cluster with no unambiguous hits that has least four markers and eight reads, join names of taxa in the cluster, prepend "?", and report as one result.
+For each remaining taxon cluster that has least four markers and eight reads, join names of taxa in the cluster, prepend "?", and report as one result.
 
 ### Simulated samples with unknown species
 
@@ -134,19 +133,20 @@ Processing infant stool samples from the Preterm Infant Resistome study [@gibson
 
 
 ## Discussion
+
+### Rationale behind our method
+For MicrobiomeDB, we would like to produce taxonomic profiles for a range of environmental data which might include novel species or strains, so the MAPQ >= 30 filter does not meet our needs. Our simulations establish that alignments to markers are only approximately correct - around 95% in general, with most misses being near misses, and novel species appearing as hits in groups of related taxa.
+
+We set `bowtie2` to report all alignments per query to be able to group reads by source - reads which map to multiple markers inform us that hits to those markers are in general related. Since presence of secondary alignments distinguishes a single unknown organism from a plurality of organisms, we can treat secondary alignments as a source of negative information - this is the basis for rejecting taxa with a few primary or unique alignments and a majority of secondary alignments.
+
+Our choice of MCL to group reads which are likely to come from the same source is a practical one, since it is a well-established method of producing clusters from measures of similarity and the problem of identified sources of reads in the sequence space has to our knowledge not yet received theoretical treatment.
+
+We chose various threshold parameters - 60 bp as minimum read length, two as the number of markers to report a taxon, 97% as match identity of unambiguous species - either by replicating EukDetect's thresholds or on an empirical basis. Readers interested in applying our method can adjust them as parameters in our reference implementation of our method after their own experimentation, as well as combine them with other thresholds.
+
 ### Our interpretation of MAPQ values
 In our results, MAPQ values are high when the source of a read is close to a sequence in the reference and the read comes from a reasonably unique region, and they are low for reads whose nearest neighbour is either ambiguous or distant. This shows that the field's original definition ( a negative logarithm of a probability that the alignment is wrong, defined for alignments to reference genomes [@li2009sequence] ) retains its intuitive meaning as a measure of certainty of location when used in metagenomics.
 
 Reads can map correctly as well as with low MAPQ in particularly congested areas of sequence space because a read coming from a segment shared between sequences does not contain enough information to assign it to the source. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses. Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, reads either do not map or they correctly map with low MAPQ. Rejecting low MAPQ reads can not improve sensitivity in this case, and our data shows downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains. In our opinion, rejecting ambiguously mapping reads can be a sensible strategy when there are plenty of other reads to use, but making use of ambiguous mappings can improve detection ability of taxonomic classifiers that focus on eukaryotes.
-
-### Our replacement for the MAPQ filter
-For MicrobiomeDB, we would like to produce taxonomic profiles for data where mapped reads do not in general come from organisms with genotypes identical to the known organisms that were assembled and annotated, so the MAPQ >= 30 filter does not meet our needs.
-
-We instead group reads by what they align to, position each observed source of reads in the sequence space, and obtain taxonomic profiles from there. To this end, we use match identity - fraction of bases agreeing between the read and where it aligned to. We also use multiple alignments per query, letting us incorporate information about each source based on all references that are near.
-
-
-We also see also other benefits to using multiple alignments per query. It tells us about match ambiguity, because the presence of secondary alignments distinguishes a single unknown organism from a presence of multiple organisms that is lost when multiple references compete for the best alignment. It also provides negative information - a secondary alignment indicates which sequence the read is not coming from.
-
 
 
 

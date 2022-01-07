@@ -16,7 +16,7 @@ Additionally, our method shows improved sensitivity when compared with EukDetect
 
 ### Conclusion
 
-MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. With our alternative filtering strategy, read mapping becomes suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open data resource, MicrobiomeDB.
+MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. With our alternative filtering strategy, read mapping becomes suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open science resource, MicrobiomeDB.
 
 ## Background
 
@@ -100,7 +100,7 @@ To summarize this section: we find that EukDetect's capacity to report on non-re
 \newpage
 
 ### Simulated reads and references
-We devise a simulation procedure based on sourcing reads from a reference and aligning them back to a version of the reference which lets us capture properties of alignments in various degrees of difference between sequenced material and available reference:  a known species, a different strain, or a novel species.
+We devise a simulation procedure based on sourcing reads from a reference and aligning them back to a version of the reference which lets us capture properties of alignments in various degrees of difference between sequenced material and available reference. We use it in four contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), reads sampled and mapped back to a small duplicated reference (regions of higher resolution in the reference), reads sampled from the whole reference which are then modified (a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species).
 
 In the most favourable case where a species in a sample is also present in the reference, most reads map correctly - overall, average precision and recall are both 95.1%, and adding the MAPQ >= 30 filter increases precision to 99.7% while decreasing recall to 91.7%. To convey the same information with a differently calculated statistic: 8% of the reads map with MAPQ < 30 and 46.2% of those are incorrectly mapped, while among reads with MAPQ >= 30, only 0.3% are incorrectly mapped. Most misses are near misses: 89% of reads that do not map back to a sequence of their species map within the correct genus. Average MAPQ value among correct mappings is 36.1, among near misses 5.2, and 4.4 among other misses. For MAPQ >= 5, precision and recall are 99.0% and 96.0%.
 
@@ -170,7 +170,7 @@ We organize simulations and make figures for this publication using a custom Mak
 
 We process `bowtie2` outputs and apply filters with our software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes. We have developed the tool side by side with this publication to explore aforementioned ideas about query identity and multiple alignments per query, and realize a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. The tool is implemented in Python. It uses the `pysam` module to read alignment files, a `sqlite3` database to store alignments and build reports, and the MCL algorithm to convert pairwise similarities of markers and taxa into cluster assignments [@van2012using].
 
-We process whole datasets with our Nextflow workflow, `wbazant/marker-alignments-nextflow`, which bundles file download, a run of `bowtie2` set up to produce multiple alignments per read, and processing the alignments.
+To process entire datasets we use our Nextflow workflow, `wbazant/marker-alignments-nextflow`, which bundles file download, a run of `bowtie2` set up to produce multiple alignments per read, and processing the alignments.
 
 ### Calculations
 We judge correctness of simulated alignments using the level of the lowest common taxon containing source and match, as provided by the ETE toolkit [@huerta2016ete ] using the NCBI database version dated 2020/1/14 packaged with EukDetect. We deem the alignment correct if the source and match are of the same species, and in case of hold-out analysis when this is not possible by construction, same genus.
@@ -178,27 +178,28 @@ We judge correctness of simulated alignments using the level of the lowest commo
 Our calculations of precision and recall are in line with definitions in the OPAL framework [@meyer2019assessing], as proportion of correctly mapping reads among reads that map to any reference (for precision) and proportion of sampled reads that correctly map (for recall).
 
 ### Different reference versions
-We approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set. Skipping any inputs where `wgsim` considers too fragmented yields 338 species to be sampled from.
+*EukDetect's reference*: we use the 1/23/2021 version of the reference provided by EukDetect, latest at time of writing.
 
-First we perform an analysis of simulated samples by preparing 338 files each containing reads from one hold-out species at 0.1 coverage [@sims2014sequencing]. We run EukDetect to establish how well the tool currently works when given unknown species. Then we run `bowtie2` and apply the MAPQ >= 30 filter, as well as the "four reads in two markers" filter. We also try a modification to EukDetect to instead filter on MAPQ >= 5 used by default in MetaPhlAn.
-
-We follow with an analysis of simulated reads. We simulate a large number of reads and align them. For each aligned read, we record correctness of the match based on its source taxon with the taxon it aligned to as well as properties of the alignment (identity, MAPQ). Then lets us infer trends between reported properties of alignments and two measures of their correctness.
+*Hold-out and remaning set*: we approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set.
 
 
-We do this in three contexts: reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data), equivalently sampled reads which are then modified ( a more realistic case where a sampled organism is of a different strain to the reference), and reads from a hold-out set mapped to the remaining set (a case of unknown species). In the first two cases, we consider the read to map correctly if it maps to the same taxon, and in the case of mapping species from a hold-out set, if it maps to another taxon of the same genus.
+*Duplicated reference*: Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
 
-Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
+### Simulated whole samples
+To simulate whole samples, we skip 33 inputs where `wgsim` considers too fragmented to source reads from at a set coverage, yielding 338 samples. We select the number of reads to source per marker so as to achieve uniform 0.1 coverage, as calculated in [@sims2014sequencing].
 
-To summarize, here is a list of different experiments:
-1. Simulate samples from a hold-out set with an unknown taxon at 0.1 coverage, run EukDetect 
-2. Use same samples, run `bowtie2`, and only use EukDetect's two filters (MAPQ >= 30, and "four reads in four markers")
-3. Use same samples, run EukDetect modified to use MAPQ >= 5 instead of MAPQ >=30
-4. Simulate a read from reference, align back to the reference
-5. Simulate a read from hold-out set, align to the remaining reference
-6. Simulate a mutated read from reference, align back to the reference
-7. Simulate a read from reference, align back to duplicated reference
+To run EukDetect, we edit the default config file such that it lists the simulated samples. For the MAPQ >= 5 modification, we additionally modify source code of our local installation.
 
-For 1. - 3., we simulate presence and count detection of species in samples. For 4. - 7. we simulate reads and check for agreement between source species and species of matched marker for each read, as well as MAPQ of alignments.
+To obtain equivalent results with no or some filters applied, we run `bowtie2` in end to end mode, and apply combinations of filters with our `marker_alignments` package.
+
+### Simulated reads
+Here is a list of different experiments where we simulate and track alignments of individual reads in the order of mention in the results section:
+1. Simulate a read from reference, align back to the reference
+2. Simulate a read from reference, align back to duplicated reference
+3. Simulate a mutated read from reference (for various mutation rate parameters), align back to the reference
+4. Simulate a read from hold-out set, align to the remaining set
+
+We perform each of the experiments approximately one million times and aggregate summary statistics. Full results are available in the supplemental material.
 
 ## Data availability
 

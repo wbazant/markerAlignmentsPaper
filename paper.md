@@ -15,7 +15,6 @@ We demonstrate that our method is in general capable of reporting novel eukaryot
 Additionally, our method shows improved sensitivity when compared with EukDetect on the DIABIMMUNE study, and the results are in broad agreement with an analysis of stool samples from the Human MicrobiomeProject. We also back up some of our reports of novel eukaryotes with taxonomic profiles constructed from k-mers.
 
 ### Conclusion
-
 MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. With our alternative filtering strategy, read mapping becomes suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open science resource, MicrobiomeDB.
 
 ## Background
@@ -44,15 +43,14 @@ EukDetect exploits its authors' finding that using a specially prepared referenc
 
 We retain the reference, as well as `bowtie2` since has been shown to be a sensitive aligner [@thankaswamy2017evaluation], but we  review the filters chosen by EukDetect. One filter which we will investigate at length in this publication is based on the reported MAPQ scores - EukDetect only keeps alignments where MAPQ >= 30. It is not the only tool which filters on MAPQ: MetaPhlAn [@segata2012metagenomic], a frequently used program for estimating taxonomic abundance also based on read mapping, also filters on MAPQ, with the default setting of MAPQ >= 5.
 
-### Unknown eukaryotes in taxonomic profiles
-
-We are not aware of any theoretical work on how alignments to markers should be used to calculate taxonomic profiles, and we consider the appropriateness of the process used by EukDetect as an open question. In particular, a possibility of an unknown eukaryote being present in the sample is not discussed in the original EukDetect publication.
-
+### Alignments to markers 
 The reference of marker genes is treated by `bowtie2` as if each marker was a contig in a reference genome. Unfortunately, an alignment to a taxon's marker is not direct evidence for the taxon being present, because a read in a sequenced environmental sample need not come from one of the points in the reference to align to its sequence. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
 
-We can stay open to the possibility of exploring some of this diversity if we use available markers as orientation points in the space of sequences. A read from a non-reference sequence might align when its source is near a known point - since naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural], this is not unlikely. One property of alignments which relates to distance in the sequence space is match identity, calculated as a fraction of bases that agree between the aligned read and the sequence it aligns to.
+We can stay open to the possibility of exploring some of this diversity if we use available markers as orientation points in the space of sequences. A read from a non-reference sequence might align when its source is near a known point - since naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural], this is not unlikely.
 
-The MAPQ values of alignments lack a similar geometric interpretation: the SAM specification [@li2009sequence], which `bowtie2` follows, defines MAPQ as an inverse logarithm of a probability that the alignment is wrong, but this is an estimate in the context of mapping reads to a reference genome like the human genome. Aligners differ in how they calculate it [@qcfail2016mapq]: `bowtie2` estimates it using the score it gives to the alignment, score of the next best alignment, and the read's quality scores [@urban2014how]. When reporting more alignments than the best one for each read, `bowtie2` describes the MAPQ scores it reports as not meaningful.
+One property of alignments which relates to distance in the sequence space is match identity, calculated as a fraction of bases that agree between the aligned read and the sequence it aligns to.
+
+MAPQ values of alignments lack a similar geometric interpretation: the SAM specification [@li2009sequence], which `bowtie2` follows, defines MAPQ as an inverse logarithm of a probability that the alignment is wrong, but this is an estimate in the context of mapping reads to a reference genome like the human genome. Aligners differ in how they calculate it [@qcfail2016mapq]: `bowtie2` estimates it using the score it gives to the alignment, score of the next best alignment, and the read's quality scores [@urban2014how]. When reporting more alignments than the best one for each read, `bowtie2` describes the MAPQ scores it reports as not meaningful.
 
 \newpage
 
@@ -144,12 +142,17 @@ Our choice of MCL to group reads which are likely to come from the same source i
 We chose various threshold parameters - 60 bp as minimum read length, two as the number of markers to report a taxon, 97% as match identity of unambiguous species - either by replicating EukDetect's thresholds or on an empirical basis. Readers interested in applying our method can adjust them as parameters in our reference implementation of our method after their own experimentation, as well as combine them with other thresholds.
 
 ### Our interpretation of MAPQ values
-In our results, MAPQ values are high when the source of a read is close to a sequence in the reference and the read comes from a reasonably unique region, and they are low for reads whose nearest neighbour is either ambiguous or distant. This shows that the field's original definition ( a negative logarithm of a probability that the alignment is wrong, defined for alignments to reference genomes [@li2009sequence] ) retains its intuitive meaning as a measure of certainty of location when used in metagenomics.
+In our results, MAPQ values are high when the source of a read is close to a sequence in the reference and the read comes from a reasonably unique region, and they are low for reads whose nearest neighbour is either ambiguous or distant. This shows that the field's original definition for alignments to reference genomes ( a negative logarithm of a probability that the alignment is wrong [@li2009sequence] ) retains its intuitive meaning as a measure of certainty of location when used in metagenomics.
 
-Reads can map correctly as well as with low MAPQ in particularly congested areas of sequence space because a read coming from a segment shared between sequences does not contain enough information to assign it to the source. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses. Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, reads either do not map or they correctly map with low MAPQ. Rejecting low MAPQ reads can not improve sensitivity in this case, and our data shows downsides of applying the MAPQ >= 30 filter to unknown species or non-reference strains. In our opinion, rejecting ambiguously mapping reads can be a sensible strategy when there are plenty of other reads to use, but making use of ambiguous mappings can improve detection ability of taxonomic classifiers that focus on eukaryotes.
+Reads can map correctly as well as with low MAPQ in particularly congested areas of sequence space because a read coming from a segment shared between sequences does not contain enough information to assign it to the source. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses. Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, reads either do not map or they correctly map with low MAPQ.
 
+### Future work
+Our method can be applied by others to set up broad screens of metagenomic data to identify samples where eukaryotes are present.
 
+The idea to use multiple alignments per query as a basis for similarity clustering could be applicable in conjunction with tools for reference-guided assembly. We have explored this briefly with KMA, setting it to report all assembled fragments, running an all-to-all nucleotide BLAST at 97% identity on the fragments, converting matches into similarity measures by computing ratios of query length to template length for each match, and running MCL. The results seemed interesting for samples dominated by a novel unknown taxon, similarly to the tool's intended use in genomic epidemiology. KMA's assembly capabilities were of little use to us in detecting eukaryotes at low coverage, and additional resource costs were formidable, so we have not further investigated its use.
 
+It could be investigated whether aspects of our method could be applied to general-purpose profilers based on read mapping, like MetaPhlAn. MetaPhlAn filters on MAPQ >= 5, but since it is already a well-optimised method that does very well in benchmarks like OPAL todo or CAMI
+TODO https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-019-0633-6
 
 \newpage
 

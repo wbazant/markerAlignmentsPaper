@@ -101,25 +101,35 @@ def taxa_that_get_wiped(ncbi, df):
 
 
 
+def plot_group(plt, groups, group, color, ax):
+    ax.scatter(groups[group]['precision'], groups[group]['precision_mapq_at_least_30'], label=group, alpha=0.2, c = color)
+    ax.set_xlim(0,1)
+    ax.set_ylim(0,1)
+    ax.legend(loc="lower left")
+    ax.set_xlabel("Precision")
+    ax.set_ylabel("Precision when MAPQ >= 30")
+
 def do(input_db, same_what, refdb_ncbi, output_png):
 
     df = get_data(input_db, same_what, refdb_ncbi)
 
-    fig, ax = plt.subplots()
+    fig, axs = plt.subplots(2, 2)
 # no legend!
 #    colors = { "Metazoa": "yellow", "Viridiplantae": "blue", "Fungi": "green", "Other": "grey"}
 #    df['kingdomColors'] = [colors[get_kingdom(ncbi, x)] for x in df['source_taxon']]
 #    df.plot.scatter(x='fraction_mapq_at_least_30', y='precision', alpha=0.3,c='kingdomColors', ax=ax)
 
 # annoyingly overplotted
-    for name, group in [t for t in df.groupby("kingdom")]:
-      plt.plot(group['precision'], group['precision_mapq_at_least_30'], marker="x", linestyle="", label=name, alpha=0.2)
+    groups = {name: group for name, group in [t for t in df.groupby("kingdom")]}
+    plot_group(plt, groups, "Fungi", "brown", axs[0][0])
+    plot_group(plt, groups, "Metazoa", "yellow", axs[0][1])
+    plot_group(plt, groups, "Plants", "green", axs[1][0])
+    plot_group(plt, groups, "Protists","blue", axs[1][1])
+    plt.tight_layout()
 
-    ax.legend()
-    ax.set_xlabel("Precision")
-    ax.set_ylabel("Precision when MAPQ >= 30")
     fig.savefig(output_png, bbox_inches='tight', dpi=199)
     
+"Fungi", "Metazoa", "Plants", "Protists"
 def get_kingdom(ncbi, taxid):
     lineage = ncbi.get_lineage(taxid)
     names = ncbi.get_taxid_translator(lineage)

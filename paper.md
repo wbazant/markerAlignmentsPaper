@@ -105,12 +105,16 @@ The degree of improvement achieved in this way turns out to depend on the source
 
 ![(A) Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
 
+\newpage
+
 
 A version of the reference where a smaller amount of sequences is included twice shows a small amount of redundancy in reference sequences does not compromise same-species precision or same-species recall (both are 99.6%), but it renders MAPQ values unusable, making them almost uniformly 0 or 1.
 
 Reads aligned to a complete reference, but mutated before the alignment, show that increasing the difference between reference and signal produces a gradual change (figure B). As we gradually increase the mutation rate until recall drops below 10%, precision stays between 95% and 96% throughout the range of mutation rates, which is concordant with `bowtie2` preserving precision over recall as seen in e.g. [@peng2015re]. Keeping only reads with MAPQ >= 30 improves precision to between 99.6% and 99%, similarly to the case of unmutated reads, but the fraction of reads with MAPQ >= 30 declines more rapidly than recall does, showing that departing from the reference makes the MAPQ >= 30 filter increasingly unfavourable.
 
 ![(B) Alignments of mutated reads, known species](figures/valuesOverMutationRate.png)
+
+\newpage
 
 Splitting the reference into hold-out and remaining sets shows that when aligning novel species, most misses are still near misses - 73% of reads from that do not map back to their genus map to another genus in the same family. Unlike in the case of a known species, average MAPQ is not higher for closer matches - it is 12.7 for reads that map to the same genus, 11.7 among reads that map to different genus within the same family, and 14.8 for reads that map to a different family. Same-genus precision and recall are 82% and 30% on average, 83.6% and 7% for reads with MAPQ >= 30, and 87% and 18.2% for reads with MAPQ >= 5.
 

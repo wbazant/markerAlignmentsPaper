@@ -100,9 +100,27 @@ def taxa_that_get_wiped(ncbi, df):
     return taxa_stat(ncbi, df, ix)
 
 
+# https://stackoverflow.com/questions/25408393/getting-individual-colors-from-a-color-map-in-matplotlib
+from matplotlib import cm
+cmap = cm.get_cmap('Dark2')  #('hsv') #('nipy_spectral')
+
+max_colors = 13   # Constant, max mumber of series in any plot.  Ideally prime.
+color_number = 0  # Variable, incremented for each series.
+
+def restart_colors():
+    global color_number
+    color_number = 0
+    #np.random.seed(1)
+
+def next_color():
+    global color_number
+    color_number += 1
+    #color = tuple(np.random.uniform(0.0, 0.5, 3))
+    color = cmap( ((5 * color_number) % max_colors) / max_colors )
+    return color
 
 def plot_group(plt, groups, group, color, ax):
-    ax.scatter(groups[group]['precision'], groups[group]['precision_mapq_at_least_30'], label=group, alpha=0.2, c = color)
+    ax.scatter(groups[group]['precision'], groups[group]['precision_mapq_at_least_30'], label=group, alpha=0.2, color = color)
     ax.set_xlim(0,1)
     ax.set_ylim(0,1)
     ax.legend(loc="lower left")
@@ -121,10 +139,11 @@ def do(input_db, same_what, refdb_ncbi, output_png):
 
 # annoyingly overplotted
     groups = {name: group for name, group in [t for t in df.groupby("kingdom")]}
-    plot_group(plt, groups, "Fungi", "brown", axs[0][0])
-    plot_group(plt, groups, "Metazoa", "yellow", axs[0][1])
-    plot_group(plt, groups, "Plants", "green", axs[1][0])
-    plot_group(plt, groups, "Protists","blue", axs[1][1])
+    restart_colors()
+    plot_group(plt, groups, "Fungi", next_color(), axs[0][0])
+    plot_group(plt, groups, "Metazoa", next_color(), axs[0][1])
+    plot_group(plt, groups, "Plants", next_color(), axs[1][0])
+    plot_group(plt, groups, "Protists",next_color(), axs[1][1])
     plt.tight_layout()
 
     fig.savefig(output_png, bbox_inches='tight', dpi=199)

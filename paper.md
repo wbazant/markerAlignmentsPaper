@@ -151,8 +151,7 @@ Our method can be applied by others to set up broad screens of metagenomic data 
 
 The idea to use multiple alignments per query as a basis for similarity clustering could be applicable in conjunction with tools for reference-guided assembly. We have explored this briefly with KMA, setting it to report all assembled fragments, running an all-to-all nucleotide BLAST at 97% identity on the fragments, converting matches into similarity measures by computing ratios of query length to template length for each match, and running MCL. The results seemed interesting for samples dominated by a novel unknown taxon, similarly to the tool's intended use in genomic epidemiology. KMA's assembly capabilities were of little use to us in detecting eukaryotes at low coverage, and additional resource costs were formidable, so we have not further investigated its use.
 
-It could be investigated whether aspects of our method could be applied to general-purpose profilers based on read mapping, like MetaPhlAn. MetaPhlAn filters on MAPQ >= 5, but since it is already a well-optimised method that does very well in benchmarks like OPAL todo or CAMI
-TODO https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-019-0633-6
+It could be investigated whether aspects of our method could be applied to general-purpose profilers based on read mapping, like MetaPhlAn. MetaPhlAn is a well-optimised method that does very well in benchmarks like OPAL [@meyer2019assessing] or CAMI [@fritz2019camisim], and finding alternative to its MAPQ >= 5 filter could allow further incremental gains, perhaps including more sequences in its reference and thus allowing for resolution at strain level.
 
 \newpage
 

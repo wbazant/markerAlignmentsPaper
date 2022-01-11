@@ -1,4 +1,4 @@
-all: paper.pdf unknownEuks/results-summary.tsv refdbDoubled/doubled.fna.1.bt2
+all: paper.pdf
 
 refdb/ncbi_eukprot_met_arch_markers.fna:
 	mkdir refdb
@@ -31,10 +31,20 @@ unknownEuks/results-summary.tsv: unknownEuks/conf.yaml
 	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
 	head unknownEuks/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuks/results-summary.tsv
 
+unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
+	mkdir -pv unknownEuksBowtie2
+	mkdir -pv unknownEuksBowtie2/results.tmp
+	mkdir -pv unknownEuksBowtie2/results
+	ls `pwd`/unknownEuks/input/* | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > unknownEuksBowtie2/in.tsv
+	bash scripts/run_our_method_on_unknown_euks.sh `pwd`/unknownEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/unknownEuksBowtie2/work `pwd`/unknownEuksBowtie2/results.tmp `pwd`/unknownEuksBowtie2/results
+
 unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv
 	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 30 -bS}g' ~/dev/EukDetect/rules/eukdetect.rules
 	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
 	head unknownEuksUnmodifiedEukdetect/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuksUnmodifiedEukdetect/results-summary.tsv
+
+supplement/wgsimWholeSamplesOneTenthCoverage.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv
+	head unknownEuks/results-summary.tsv unknownEuksBowtie2/results/*.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv > supplement/wgsimWholeSamplesOneTenthCoverage.tsv
 
 tmp:
 	mkdir -pv tmp
@@ -87,5 +97,9 @@ supplement/wgsimLeaveOneOut.tsv: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.jso
 	mkdir -pv supplement
 	python3 scripts/wgsim_to_tsv.py  --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-tsv supplement/wgsimLeaveOneOut.tsv
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv
+supplement/wgsimDoubled.tsv: tmpDoubled/wgsimMutationRate.json
+	mkdir -pv supplement
+	python3 scripts/wgsim_to_tsv.py  --input-json tmpDoubled/wgsimMutationRateLeaveOneOut.json --output-tsv supplement/wgsimDoubled.tsv
+
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

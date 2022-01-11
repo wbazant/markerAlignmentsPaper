@@ -33,6 +33,6 @@ for f in $oneTenthFolder/* ; do
   echo "  $species:" >> $outputConf
 
   # num reads is number of letters divided by read length (100) multiplied by desired coverage (0.1)
-  numReads=$(grep -v '>' ./refdbCrossValidation/oneTenthFolder/Yarrowia_keelungensis | perl -pe chomp | wc -c | perl -nE 'chomp; say sprintf("%d", $_ / 1000)' )
+  numReads=$(grep -v '>' $f | perl -pe chomp | wc -c | perl -nE 'chomp; say sprintf("%d", $_ / 1000)' )
   wgsim -S 1337 -1100 -2100 -e 0.0 -r 0.0 -N $numReads $f $simPath/$species.1.fq  $simPath/$species.2.fq
 done

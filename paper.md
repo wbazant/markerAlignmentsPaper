@@ -58,7 +58,7 @@ For processing MicrobiomeDB data, we run `bowtie2` set to report all alignments,
 
 Keep all alignments that are at least 60 bases long (regardless of their MAPQ score).
 
-*Step 2. (Marker clusters)*
+*Step 2. (Construct marker clusters)*
 <!-- I don't quite follow this one. The markers are reference sequences, correct? And then the distance between them is the number of multiply aligned reads? Then we can use the clustering results to say 'hey this marker is really in its group' or 'this marker isn't really with any group'? -->
 Cluster markers using the Markov Clustering (MCL) algorithm with a number of multiply aligned reads for each pair of markers. Compute mean match identity for each marker cluster as well as for each individual marker, and use the values to classify each marker as "at least average in its marker cluster" or "below average in its marker cluster".
 
@@ -96,7 +96,7 @@ In summary, we find that EukDetect's capacity to report on non-reference species
 \newpage
 
 ### Simulated reads and references
-<!-- I don't quite follow why this step happens next? Is it that okay we know it's the mapq filter so let's understand this better? -->
+<!-- Let's add a transition sentence like okay we know it's the mapq filter so let's understand this better? -->
 We devise a simulation procedure based on sourcing reads from a reference and aligning them back to a version of the reference which lets us capture properties of alignments in various degrees of difference between sequenced material and available reference. We use it in four contexts: 
 1. reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data),
 2. reads sampled and mapped back to a small duplicated reference (regions of higher resolution in the reference),
@@ -127,15 +127,15 @@ In total, we demonstrate that the difficulty of mapping a read varies by taxa, a
 
 \newpage
 
-<!-- I think this is where Our Method should go. At this point we know A) about EukDetect, B) that it does poorly on unknown taxa, and C) that the mapq filter is responsible. Time to shine by offering your method as the solution to these problems! -->
-<!-- Also the next section is about both your method and EukDetect, so it'd be great to have yours discussed right before it so that readers have it clearly in their mind. Your method is the most important method in this paper afterall! -->
+
 ### Comparing detected unkonwn species to known results
-<!-- Seems like this section is largely about checking your method against known results? Probably lead with all the examples that show your method is amazing and then at the end can say that from here on out all mbioDB data will be processed like this. -->
+<!-- At the end can say that from here on out all mbioDB data will be processed like this. -->
 In order to evaluate our method, we ran our pipeline on datasets in which we already had expectations about which eukaryotes should exist. We began with the Human Microbiome Project data [@turnbaugh2007human], comprised of XX samples and blah other details. Our results from processing Human Microbiome Project data largely agree with [@nash2017gut] who compare the same stool samples sequenced with and without amplification of the fungal ITS2 region (WGS vs. ITS2). We find the same taxa in the Human Microbiome Project data as those most common results in [@nash2017gut]: *Malassezia* and *Candida* fungi. We also agree with the conclusion that the sequencing depth of the samples was not sufficient to detect fungal taxa with sensitivity achieved by ITS2 sequencing - only 15 / 146 of stool samples in the Human Microbiome Project report *S. cerevisiae*, a ubiquitous yeast that [@nash2017gut] found in the majority of the samples with ITS2, but only in a fraction of the samples with WGS. While the picture our results draw is not complete, they contain enough information to generate hypotheses and further leads. Findings of eukaryotes that can potentially cause disease include a protozoan *Trichomonas tenax* in two oral samples, and 4 / 10 of samples from the subject ID 246515023 contain a disease-causing fungus *Aspergillus fumigatus*.
 
 Next we turn to the DIABIMMUNE study [@vatanen2016variation] with XX samples and blah other details. The DIABIMMUNE study is particularly helpful in evaluating our method, because it allows us to cross-check our method with results reported in the original EukDetect publication. Having processed the same 1154 samples, our method agrees with EukDetect on 122 data points, EukDetect has additional 14, and we have additional 97. Some of the additional results can be explained as higher sensitivity of our method. For example, a common taxon *S. cerevisiae* is reported 67 times by our method and 31 by EukDetect. The additional complexity of our method when handling unknown species produces a few disagreements. In sample G78909, EukDetect reports *Penicillium nordicum*, while our method reports a novel *Penicillium*, and in sample G78500, EukDetect's reported *Kazachstania unispora* is rejected by our method as an off-target hit. In sample G80329, our method agrees with EukDetect about *Candida parapsilosis*, and reports an additional *C. albicans*, plausibly, because the reads assigned to the two species align to entirely different markers.
 <!-- Results in ^^ possibly worth a table or figure, since this is probably the most important of the three data tests -->
 <!-- Worth explaining more what specific complexity led to each of these example disagreements -->
+<!-- Ann to think about a figure! -->
 
 Finally, we process infant stool samples from the Preterm Infant Resistome study [@gibson2016developmental]. We uncovered that a sample corresponding to SRA run ID SRR3132435 has been colonised by organisms from the *Mucor* genus, possibly between sample collection and sequencing. This is not reported by EukDetect despite over three thousand reads from the sample mapping to *Mucor* markers, because they all get filtered out by the MAPQ >= 30 filter. Our method reports a presence of a species of *Mucor* most similar to *M. velutinosus*, *M. circinelloides*, and *M. ambiguus*. A second source to support this result is STAT [@katz2021stat], assigning 0.34% of the reads assigned to order *Mucorales* on the basis of k-mer similarity.
 <!-- This one could also use a figure. Maybe a panel for this one and a panel for diabimmune? Either venn diagrams for both or some histograms with stats below or something. Not sure what people would want to see here. Dan would know. Maybe a bar plot wiht different taxa of interest and grouped by algorithm? Looking at the eukdetect paper for ideas... -->

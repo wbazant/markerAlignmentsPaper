@@ -99,7 +99,7 @@ supplement/wgsimLeaveOneOut.tsv: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.jso
 
 supplement/wgsimDoubled.tsv: tmpDoubled/wgsimMutationRate.json
 	mkdir -pv supplement
-	python3 scripts/wgsim_to_tsv.py  --input-json tmpDoubled/wgsimMutationRateLeaveOneOut.json --output-tsv supplement/wgsimDoubled.tsv
+	python3 scripts/wgsim_to_tsv.py  --input-json tmpDoubled/wgsimMutationRate.json --output-tsv supplement/wgsimDoubled.tsv
 
 paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

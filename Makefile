@@ -39,8 +39,13 @@ unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 	bash scripts/run_our_method_on_unknown_euks.sh `pwd`/unknownEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/unknownEuksBowtie2/work `pwd`/unknownEuksBowtie2/results.tmp `pwd`/unknownEuksBowtie2/results
 
 unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv
+	mkdir -pv unknownEuksUnmodifiedEukdetect
+	(cd unknownEuksUnmodifiedEukdetect && ln -sv ../unknownEuks/input input )
+	mkdir -pv unknownEuksUnmodifiedEukdetect/results
+	perl -pe 's/unknownEuks/unknownEuksUnmodifiedEukdetect/g' unknownEuks/conf.yaml > unknownEuksUnmodifiedEukdetect/conf.yaml
 	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 30 -bS}g' ~/dev/EukDetect/rules/eukdetect.rules
-	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
+	
+	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuksUnmodifiedEukdetect/conf.yaml  --cores 1 runall
 	head unknownEuksUnmodifiedEukdetect/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuksUnmodifiedEukdetect/results-summary.tsv
 
 supplement/wgsimWholeSamplesOneTenthCoverage.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv

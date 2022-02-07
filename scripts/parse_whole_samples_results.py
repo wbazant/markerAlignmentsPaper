@@ -50,6 +50,10 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
 
 trad_ranks = {"superkingdom", "kingdom", "phylum", "class", "order", "family", "genus", "species"}
 
+def base_taxid(ncbi, taxids):
+    tree = ncbi.get_topology(taxids)
+    r = tree.get_tree_root()
+    return str(r.name)
 
 def get_match_type(ncbi, taxids):
     tree = ncbi.get_topology(taxids)
@@ -85,12 +89,22 @@ header = [
 "Many results, incorrect genus",
 ]
 
-def do(refdb_ncbi, refdb_marker_to_taxon_path, input_file):
+# it could start with a ?
+# if yes, it could be a list of comma-separated results
+# it could have taxid at the beginning
+def get_taxid_from_string(ncbi, x):
+    if x[0] == '?':
+        ids = [get_taxid_from_string(ncbi, _x) for _x in x[1:].split(",")]
+        return base_taxid(ncbi, ids)
 
-    scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
+    if len(x.split("|")) > 1:
+        return x.split("|")[0]
 
-    ncbi = NCBITaxa(refdb_ncbi)
+    name2taxid = ncbi.get_name_translator([x])
+    vs = [x for xx in name2taxid.values() for x in xx]
+    return vs[0]
 
+def do_one(scrambled_name_to_taxid, ncbi, input_file):
     counts = {h:0 for h in header}
     with open(input_file, 'r') as f:
         for l in f:
@@ -102,19 +116,23 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, input_file):
             source_taxid = scrambled_name_to_taxid[source_taxon]
             n = int(xs.pop(0))
             if n:
-                name2taxid = ncbi.get_name_translator(xs)
-                vs = [x for xx in name2taxid.values() for x in xx]
+                vs = [get_taxid_from_string(ncbi, x) for x in xs]
                 vs.append(str(source_taxid))
                 rank = get_match_type(ncbi, vs)
                 counts[ct(n, rank)]+=1
             else:
                 counts["No results"]+=1
+    return counts
+
+def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
+    scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
+
+    ncbi = NCBITaxa(refdb_ncbi)
     print("| Name | " + " | ".join(header) + " |")
     print("| -- | " + " | ".join(["--" for h in header]) + " |")
-    print("| " + input_file + " | " + " | ".join([str(counts[h]) for h in header]) + " |")
-
-            
-
+    for input_file in input_files:
+        counts = do_one(scrambled_name_to_taxid, ncbi, input_file)
+        print("| " + input_file + " | " + " | ".join([str(counts[h]) for h in header]) + " |")
 
 
 
@@ -125,7 +143,7 @@ def main(argv=sys.argv[1:]):
     )
     parser.add_argument("--refdb-marker-to-taxon-path", type=str, action="store", dest="refdb_marker_to_taxon_path", help = "Lookup file, two columns - marker name, taxon name", required = True)
     parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa", required = True)
-    parser.add_argument("--input", type=str, action="store", dest="input_file", help = "results summary input", required = True)
+    parser.add_argument("--input", type=str, action="append", dest="input_files", help = "results summary inputs", required = True)
 
 
 

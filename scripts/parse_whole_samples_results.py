@@ -38,7 +38,8 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
         for line in f:
             if line.find("Collapse") > -1:
                 continue
-            (marker, taxon) = line.rstrip().split("\t")
+            (marker, taxon_str) = line.rstrip().split("\t")
+            taxon = int(taxon_str)
             search = pattern_taxon.search(marker)
             scrambled_name = next_g(search)
             if scrambled_name in result and result[scrambled_name] != taxon:
@@ -88,6 +89,18 @@ header = [
 "One result, incorrect genus",
 "Many results, incorrect genus",
 ]
+header_shortcuts = {
+        "No results": "NR",
+        "One result, correct genus": "OC" ,
+        "Many results, correct genus": "MC",
+        "One result, incorrect genus": "OI",
+        "Many results, incorrect genus": "MI",
+}
+
+def sc(all_results, input_file, taxid):
+    if taxid not in all_results[input_file]:
+        return "XX"
+    return header_shortcuts[all_results[input_file][taxid]]
 
 # it could start with a ?
 # if yes, it could be a list of comma-separated results
@@ -104,35 +117,62 @@ def get_taxid_from_string(ncbi, x):
     vs = [x for xx in name2taxid.values() for x in xx]
     return vs[0]
 
+def do_one_line(scrambled_name_to_taxid, ncbi, xs):
+    source_taxon = xs.pop(0)
+    source_taxid = scrambled_name_to_taxid[source_taxon]
+    n = int(xs.pop(0))
+    if n:
+        vs = [get_taxid_from_string(ncbi, x) for x in xs]
+        vs.append(str(source_taxid))
+        rank = get_match_type(ncbi, vs)
+        return source_taxid, ct(n, rank)
+    else:
+        return source_taxid, "No results"
+
 def do_one(scrambled_name_to_taxid, ncbi, input_file):
     counts = {h:0 for h in header}
+    cs_for_species = {}
     with open(input_file, 'r') as f:
         for l in f:
-
             xs = l.rstrip().split("\t")
-            source_taxon = xs.pop(0)
-            if not source_taxon:
+            if len(xs) < 2 or not xs[0]:
                 continue
-            source_taxid = scrambled_name_to_taxid[source_taxon]
-            n = int(xs.pop(0))
-            if n:
-                vs = [get_taxid_from_string(ncbi, x) for x in xs]
-                vs.append(str(source_taxid))
-                rank = get_match_type(ncbi, vs)
-                counts[ct(n, rank)]+=1
-            else:
-                counts["No results"]+=1
-    return counts
+            try:
+                source_taxid, c = do_one_line(scrambled_name_to_taxid, ncbi, xs)
+            except KeyError as e:
+                raise ValueError(input_file, xs, l)
+            counts[c]+=1
+            cs_for_species[source_taxid] = c
+    return counts, cs_for_species
 
 def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
     scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
 
     ncbi = NCBITaxa(refdb_ncbi)
-    print("| Name | " + " | ".join(header) + " |")
-    print("| -- | " + " | ".join(["--" for h in header]) + " |")
+    lines = []
+    lines.append("# Summary: ")
+    lines.append("# | Name | " + " | ".join(header) + " |")
+    lines.append("# | -- | " + " | ".join(["--" for h in header]) + " |")
+
+    all_results = {}
     for input_file in input_files:
-        counts = do_one(scrambled_name_to_taxid, ncbi, input_file)
-        print("| " + input_file + " | " + " | ".join([str(counts[h]) for h in header]) + " |")
+        counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, input_file)
+        lines.append("# | " + input_file + " | " + " | ".join([str(counts[h]) for h in header]) + " |")
+        all_results[input_file] = cs_for_species
+
+    all_taxids = set([x for xx in all_results.values() for x in xx ])
+    taxid_to_name = ncbi.get_taxid_translator(all_taxids)
+
+    lines.append("# Values legend: ")
+    for h in header:
+        lines.append("# " + header_shortcuts[h] + ": " + h)
+
+    lines.append("#")
+    lines.append("species\t" + "\t".join(input_files))
+    for taxid in sorted(all_taxids):
+        lines.append(str(taxid) + "|" + taxid_to_name[taxid] + "\t" + "\t".join([sc(all_results, input_file, taxid) for input_file in input_files]))
+    for line in lines:
+        print(line)
 
 
 

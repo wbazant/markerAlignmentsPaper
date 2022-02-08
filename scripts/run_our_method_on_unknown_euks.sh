@@ -29,7 +29,7 @@ runOne(){
     --libraryLayout paired \
     --refdb "$refdbPath" \
     --markerToTaxonPath "$markerToTaxonPath" \
-    --bowtie2Command "$bowtie2Command" \
+    --bowtie2Command "$bowtie2Command --threads 1" \
     --summarizeAlignmentsCommand "$summarizeAlignmentsCommand" \
     -with-trace -resume && python -c 'import sys; import pandas; df = pandas.read_csv(sys.stdin, sep="\t", header = 0, index_col = 0); [print(index + "\t" + str(col.notnull().sum()) + "\t" + "\t".join(col[col.notnull()].keys())) for index, col in df.iteritems()]' < "$resultsTmp/cpms.tsv" > "$outputPath"
 }

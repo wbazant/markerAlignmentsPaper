@@ -155,10 +155,17 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
     lines.append("# | -- | " + " | ".join(["--" for h in header]) + " |")
 
     all_results = {}
+    input_names = []
     for input_file in input_files:
-        counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, input_file)
-        lines.append("# | " + input_file + " | " + " | ".join([str(counts[h]) for h in header]) + " |")
-        all_results[input_file] = cs_for_species
+        if ":" in input_file:
+            (input_name, input_path) = input_file.split(":")
+        else:
+            input_name = input_file
+            input_path = input_file
+        input_names.append(input_name)
+        counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, input_path)
+        lines.append("# | " + input_name + " | " + " | ".join([str(counts[h]) for h in header]) + " |")
+        all_results[input_name] = cs_for_species
 
     all_taxids = set([x for xx in all_results.values() for x in xx ])
     taxid_to_name = ncbi.get_taxid_translator(all_taxids)
@@ -168,9 +175,9 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
         lines.append("# " + header_shortcuts[h] + ": " + h)
 
     lines.append("#")
-    lines.append("species\t" + "\t".join(input_files))
+    lines.append("species\t" + "\t".join(input_names))
     for taxid in sorted(all_taxids):
-        lines.append(str(taxid) + "|" + taxid_to_name[taxid] + "\t" + "\t".join([sc(all_results, input_file, taxid) for input_file in input_files]))
+        lines.append(str(taxid) + "|" + taxid_to_name[taxid] + "\t" + "\t".join([sc(all_results, input_name, taxid) for input_name in input_names]))
     for line in lines:
         print(line)
 

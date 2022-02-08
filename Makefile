@@ -49,7 +49,20 @@ unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.
 	head unknownEuksUnmodifiedEukdetect/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuksUnmodifiedEukdetect/results-summary.tsv
 
 supplement/wgsimWholeSamplesOneTenthCoverage.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv
-	head unknownEuks/results-summary.tsv unknownEuksBowtie2/results/*.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv > supplement/wgsimWholeSamplesOneTenthCoverage.tsv
+	python3 scripts/parse_whole_samples_results.py \
+		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
+		--refdb-ncbi refdb/taxa.sqlite \
+		--input "No filter:unknownEuksBowtie2/results/no-filter.results-summary.tsv" \
+		--input "m2:unknownEuksBowtie2/results/m2.results-summary.tsv" \
+		--input "M30:unknownEuksBowtie2/results/M30.results-summary.tsv" \
+		--input "r4:unknownEuksBowtie2/results/r4.results-summary.tsv" \
+		--input "m2M30:unknownEuksBowtie2/results/m2M30.results-summary.tsv" \
+		--input "m2r4:unknownEuksBowtie2/results/m2r4.results-summary.tsv" \
+		--input "r4M30:unknownEuksBowtie2/results/r4M30.results-summary.tsv" \
+		--input "m2r4M30:unknownEuksBowtie2/results/m2r4M30.results-summary.tsv" \
+		--input "EukDetect:unknownEuksUnmodifiedEukdetect/results-summary.tsv" \
+		--input "modified EukDetect (MAPQ>=5):unknownEuks/results-summary.tsv" \
+		--input "our method:unknownEuksBowtie2/results/our-method.results-summary.tsv" > supplement/wgsimWholeSamplesOneTenthCoverage.tsv
 
 tmp:
 	mkdir -pv tmp
@@ -94,6 +107,9 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
 	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species
 
+figures/dropoutForFilters.png: supplement/wgsimWholeSamplesOneTenthCoverage.tsv
+	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv --output-png figures/dropoutForFilters.png
+
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
 	mkdir -pv supplement
 	python3 scripts/wgsim_to_tsv.py  --input-json tmp/wgsimMutationRate.json --output-tsv supplement/wgsim.tsv
@@ -106,5 +122,5 @@ supplement/wgsimDoubled.tsv: tmpDoubled/wgsimMutationRate.json
 	mkdir -pv supplement
 	python3 scripts/wgsim_to_tsv.py  --input-json tmpDoubled/wgsimMutationRate.json --output-tsv supplement/wgsimDoubled.tsv
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv figures/dropoutForFilters.png
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

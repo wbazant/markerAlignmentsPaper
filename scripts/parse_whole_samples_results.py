@@ -45,7 +45,6 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
             if scrambled_name in result and result[scrambled_name] != taxon:
                 raise ValueError(line, taxon, result[scrambled_name])
             result[scrambled_name] = taxon
-                
 
     return result
 

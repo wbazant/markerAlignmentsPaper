@@ -93,6 +93,8 @@ Re-running EukDetect modified to filter on MAPQ >= 5 leads to fewer instances a 
 
 In summary, we find that EukDetect's capacity to report on non-reference species is limited by its MAPQ >= 30 filter. 
 <!-- Reviewers may nitpick at the "applying some of its filters" and then the stark conclusion that EukDetect's ability to report unknown species is definitely the mapq filter. Maybe it was some other filter you didn't test? Consider specifying which exact filters were tested and why some weren't. -->
+
+![**Figure 0: MAPQ >= 30 filter is responsible for most dropout** Effects of filters](figures/dropoutForFilters.png)
 \newpage
 
 ### Simulated reads and references

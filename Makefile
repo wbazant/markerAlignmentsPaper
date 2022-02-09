@@ -36,12 +36,12 @@ unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 	mkdir -pv unknownEuksBowtie2
 	mkdir -pv unknownEuksBowtie2/results.tmp
 	mkdir -pv unknownEuksBowtie2/results
-	ls `pwd`/unknownEuks/input/* | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > unknownEuksBowtie2/in.tsv
+	ls `pwd`/unknownEuks/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > unknownEuksBowtie2/in.tsv
 	bash scripts/run_our_method_on_unknown_euks.sh `pwd`/unknownEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/unknownEuksBowtie2/work `pwd`/unknownEuksBowtie2/results.tmp `pwd`/unknownEuksBowtie2/results
 
 unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv
 	mkdir -pv unknownEuksUnmodifiedEukdetect
-	(cd unknownEuksUnmodifiedEukdetect && ln -sv ../unknownEuks/input input )
+	(cd unknownEuksUnmodifiedEukdetect && rm -rf input && ln -sv ../unknownEuks/input input)
 	mkdir -pv unknownEuksUnmodifiedEukdetect/results
 	perl -pe 's/unknownEuks/unknownEuksUnmodifiedEukdetect/g' unknownEuks/conf.yaml > unknownEuksUnmodifiedEukdetect/conf.yaml
 	perl -i -pe 's{bowtie2( --threads \d+)?( --seed \d+)?}{bowtie2 --threads 1 --seed 1337}g' ~/dev/EukDetect/rules/eukdetect.rules

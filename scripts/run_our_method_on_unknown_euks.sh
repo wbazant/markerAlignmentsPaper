@@ -29,7 +29,7 @@ runOne(){
     --libraryLayout paired \
     --refdb "$refdbPath" \
     --markerToTaxonPath "$markerToTaxonPath" \
-    --bowtie2Command "$bowtie2Command --threads 1" \
+    --bowtie2Command "$bowtie2Command" \
     --summarizeAlignmentsCommand "$summarizeAlignmentsCommand" \
     -with-trace -resume && python -c 'import sys; import pandas; df = pandas.read_csv(sys.stdin, sep="\t", header = 0, index_col = 0); [print(index + "\t" + str(col.notnull().sum()) + "\t" + "\t".join(col[col.notnull()].keys())) for index, col in df.iteritems()]' < "$resultsTmp/cpms.tsv" > "$outputPath"
 }
@@ -50,7 +50,7 @@ runOne \
   r4.results-summary.tsv \
   "$workDir" \
   "bowtie2 --omit-sec-seq --no-discordant --no-unal" \
-  "marker_alignments  --min-taxon-num-reads 4"
+  "marker_alignments  --min-taxon-num-alignments 4"
 
 runOne \
   M30.results-summary.tsv \
@@ -68,19 +68,19 @@ runOne \
   r4M30.results-summary.tsv \
   "$workDir" \
   "bowtie2 --omit-sec-seq --no-discordant --no-unal" \
-  "marker_alignments --min-taxon-num-reads 4 --min-read-mapq 30"
+  "marker_alignments --min-taxon-num-alignments 4 --min-read-mapq 30"
 
 runOne \
   m2r4.results-summary.tsv \
   "$workDir" \
   "bowtie2 --omit-sec-seq --no-discordant --no-unal" \
-  "marker_alignments --min-taxon-num-markers 2 --min-taxon-num-reads 4"
+  "marker_alignments --min-taxon-num-markers 2 --min-taxon-num-alignments 4"
 
 runOne \
   m2r4M30.results-summary.tsv \
   "$workDir" \
   "bowtie2 --omit-sec-seq --no-discordant --no-unal" \
-  "marker_alignments --min-taxon-num-markers 2 --min-taxon-num-reads 4 --min-read-mapq 30"
+  "marker_alignments --min-taxon-num-markers 2 --min-taxon-num-alignments 4 --min-read-mapq 30"
 
 runOne \
   our-method.results-summary.tsv \

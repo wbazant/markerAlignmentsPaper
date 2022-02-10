@@ -20,14 +20,19 @@ def main(argv=sys.argv[1:]):
     is_m2 = "two markers"
     is_r4 = "four reads"
     is_M30 = "MAPQ >= 30"
+    is_Euk = "EukDetect"
+    is_EukMod = "EukDetect (MAPQ >=5)"
+    is_our = "our method"
+    df[is_Euk] = df.index.to_series().str.endswith("EukDetect")
+    df[is_EukMod] = df.index.to_series().str.contains("EukDetect ")
+    df[is_our] = df.index.to_series().str.contains("our method")
     df[is_m2] = df.index.to_series().str.contains("m2") | df.index.to_series().str.contains("EukDetect")
     df[is_r4] = df.index.to_series().str.contains("r4") | df.index.to_series().str.contains("EukDetect")
     df[is_M30] = df.index.to_series().str.contains("M30") | df.index.to_series().str.endswith("EukDetect")
-
-    df = df.head(8)
+ 
     df["NRf"] = df["NR"] / nrows
-
-    cs = pd.Series(df["NRf"].array, index=pd.MultiIndex.from_frame(df[[is_m2, is_r4, is_M30]]))
+ 
+    cs = pd.Series(df["NRf"].array, index=pd.MultiIndex.from_frame(df[[is_m2, is_M30, is_Euk, is_EukMod, is_our]]))
 
     u = UpSet(cs, sort_by="cardinality")
 

@@ -1,0 +1,360 @@
+# Summary: 
+# | Name | No results | One result, correct genus | Many results, correct genus | One result, incorrect genus | Many results, incorrect genus | Signal detected | Detected signal is one species |
+# | -- | -- | -- | -- | -- | -- | -- | -- |
+# | No filter | 58 | 16 | 68 | 22 | 174 | 0.828 | 0.136 |
+# | m2 | 105 | 43 | 92 | 16 | 82 | 0.689 | 0.253 |
+# | M30 | 186 | 68 | 51 | 15 | 18 | 0.45 | 0.546 |
+# | r4 | 131 | 50 | 83 | 15 | 59 | 0.612 | 0.314 |
+# | m2M30 | 211 | 61 | 43 | 14 | 9 | 0.376 | 0.591 |
+# | m2r4 | 132 | 50 | 83 | 15 | 58 | 0.609 | 0.316 |
+# | r4M30 | 219 | 59 | 40 | 16 | 4 | 0.352 | 0.63 |
+# | m2r4M30 | 221 | 59 | 39 | 15 | 4 | 0.346 | 0.632 |
+# | EukDetect | 221 | 80 | 18 | 15 | 4 | 0.346 | 0.812 |
+# | modified EukDetect (MAPQ>=5) | 179 | 77 | 41 | 19 | 22 | 0.47 | 0.604 |
+# | our method | 133 | 107 | 29 | 57 | 12 | 0.607 | 0.8 |
+# Values legend: 
+# NR: No results
+# OC: One result, correct genus
+# MC: Many results, correct genus
+# OI: One result, incorrect genus
+# MI: Many results, incorrect genus
+#
+species	No filter	m2	M30	r4	m2M30	m2r4	r4M30	m2r4M30	EukDetect	modified EukDetect (MAPQ>=5)	our method
+2769|Chondrus crispus	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+2898|Cryptomonas paramecium	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+3037|Euglena longa	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+3088|Tetradesmus obliquus	MI	MI	MI	MI	OI	MI	OI	OI	OI	MI	MI
+3165|Tetraselmis striata	MI	MI	NR	OC	NR	OC	NR	NR	NR	NR	OI
+4786|Phytophthora cryptogea	MC	MC	NR	MC	NR	MC	NR	NR	NR	NR	MC
+4921|Pichia norvegensis	MC	MC	NR	OC	NR	OC	NR	NR	NR	NR	OC
+5050|Epichloe uncinata	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	MC
+5078|Penicillium griseofulvum	MC	MC	NR	MC	NR	MC	NR	NR	NR	MC	OC
+5093|Byssochlamys nivea	MI	MI	OC	MI	OC	MI	OC	OC	OC	OC	OC
+5481|Diutina rugosa	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+5554|Cutaneotrichosporon cutaneum	MI	MI	NR	MI	NR	MI	NR	NR	NR	OI	OI
+5599|Alternaria alternata	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+5705|Endotrypanum monterogeii	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+5763|Naegleria fowleri	OC	OC	OC	OC	OC	OC	NR	NR	NR	OC	OC
+5857|Plasmodium fragile	MC	MC	NR	MC	NR	MC	NR	NR	NR	NR	OC
+6161|Dugesia japonica	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+6216|Hymenolepis diminuta	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	OI
+6257|Parascaris univalens	OI	OI	NR	OI	NR	OI	NR	NR	NR	OI	OI
+6304|Meloidogyne arenaria	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	MC
+6848|Carcinoscorpius rotundicauda	MI	MI	MI	MI	MI	MI	OI	OI	OI	MI	OI
+6852|Tachypleus gigas	MI	MI	MI	MI	MI	MI	MI	MI	MI	MI	OC
+7070|Tribolium castaneum	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+7107|Spodoptera exigua	MI	MC	MC	MC	NR	MC	NR	NR	NR	OC	OC
+7159|Aedes aegypti	MI	MI	OC	OC	NR	OC	NR	NR	NR	OC	OI
+7213|Ceratitis capitata	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+7233|Drosophila orena	MC	MC	MC	MC	MC	MC	OC	OC	OC	OC	OC
+7237|Drosophila pseudoobscura	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+7257|Drosophila robusta	MI	MC	OC	MC	OC	MC	NR	NR	NR	MC	OC
+7425|Nasonia vitripennis	MI	MI	MI	MI	MI	MI	MI	MI	MI	MI	MI
+7493|Trichogramma pretiosum	MI	MC	MC	MC	OC	MC	OC	OC	OC	MC	MC
+7741|Branchiostoma belcheri	MI	MC	OC	MC	NR	MC	NR	NR	NR	MC	OC
+13249|Rhodnius prolixus	OI	OI	OI	OI	NR	OI	NR	NR	NR	NR	OI
+27332|Protomyces inouyei	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+27349|Puccinia sorghi	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+27357|Colletotrichum acutatum	MI	MC	OC	MC	OC	MC	OC	OC	OC	MC	OC
+27835|Nippostrongylus brasiliensis	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+27987|Cryptosporidium baileyi	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+29058|Helicoverpa armigera	MI	MI	MI	MI	OC	MI	OC	OC	OC	MI	OC
+30213|Vespula pensylvanica	MI	MI	MI	MI	MI	MI	MC	MC	MC	MI	MC
+33442|Heliconius himera	MI	MC	MC	MC	OC	MC	OC	OC	OC	OC	MC
+33649|Thalassionema nitzschioides	OC	OC	NR	OC	NR	OC	NR	NR	NR	NR	NR
+34356|Kodamaea ohmeri	MI	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+34649|Mesobuthus martensii	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+36057|Rhizopogon vulgaris	MI	MI	NR	MC	NR	MC	NR	NR	NR	OC	OC
+36087|Trichuris trichiura	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+36894|Pyramimonas parkeae	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+36907|Kazachstania telluris	MI	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+37001|Glossina brevipalpis	MI	MC	NR	MC	NR	MC	NR	NR	NR	NR	OC
+37099|Isochrysis galbana	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+37344|Athalia rosae	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+39455|Alexandrium minutum	MC	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+39714|Euglypha rotunda	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+39758|Mayetiola destructor	MI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+41117|Pollicipes pollicipes	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	OI
+42258|Zygosaccharomyces mellis	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+42890|Sarcocystis neurona	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+43041|Anopheles christyi	MI	MC	NR	MC	NR	MC	NR	NR	NR	NR	MC
+43686|Pelagodinium beii	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+44067|Blastobotrys proliferans	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+44074|Saprochaete suaveolens	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+44416|Eimeria nieschulzi	OC	OC	OC	OC	NR	OC	NR	NR	NR	OC	OC
+44941|Gigaspora rosea	OI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+45511|Yamadazyma scolyti	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+45599|[Candida] torresii	MC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+46361|Starmerella geochares	OC	OC	NR	OC	NR	OC	NR	NR	NR	NR	NR
+47278|Trichothecium roseum	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	OI
+47427|Armillaria gallica	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	OC
+48269|Schistosoma margrebowiei	MC	MC	MC	MC	MC	MC	MC	MC	OC	MC	MC
+48498|Orbicella faveolata	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	NR
+48692|Taphrina pruni	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+49012|Sporisorium scitamineum	MI	MI	OC	MI	NR	MI	NR	NR	NR	OC	OI
+49329|[Candida] montana	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+49980|Climacostomum virens	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+50267|Ogataea trehalophila	MI	OC	OC	OC	NR	OC	NR	NR	NR	OC	OC
+50429|Stylophora pistillata	MI	MI	MI	MI	OI	MI	OI	OI	OI	MI	OI
+51022|Ancylostoma duodenale	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+54790|Parastagonospora avenaria f. sp. tritici	MI	MI	MI	MI	NR	MI	NR	NR	NR	MI	OI
+55514|Lactarius deliciosus	MI	MC	MC	MC	MC	MC	MC	MC	OC	MC	OC
+56874|Lipomyces mesembrius	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+58635|Saturnispora zaruensis	MC	MC	NR	MC	NR	MC	NR	NR	NR	NR	OC
+61284|Fusarium tricinctum	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	OC
+61478|Timema douglasi	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	MC
+62324|Anopheles funestus	MC	MC	NR	MC	NR	MC	NR	NR	NR	MC	OC
+62625|Varroa jacobsoni	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+63396|Ustilago cynodontis	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+64657|Tremella fuciformis	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+64838|Fopius arisanus	MI	OI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+65659|Acanthamoeba comandoni	MC	MC	OC	MC	NR	MC	NR	NR	NR	OC	OC
+66581|Hypochthonius rufulus	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+67531|Drosophila lacteicornis	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+69463|Henneguya salminicola	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+69788|Penicillium sclerotiorum	MI	OC	NR	NR	NR	NR	NR	NR	NR	NR	OC
+70186|Spongospora subterranea	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+71717|Coprinellus micaceus	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+71782|Holtermannia corniformis	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+71804|Trypanosoma grayi	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+73520|Metschnikowia hibisci	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+74722|Stachybotrys chartarum	MI	MI	OC	MI	OC	MI	OC	OC	OC	OC	OC
+74873|Anopheles sinensis	MI	MC	NR	MC	NR	MC	NR	NR	NR	NR	MC
+75152|Andricus curvator	MI	MI	MI	MI	NR	MI	NR	NR	NR	MI	OI
+75733|Wickerhamiella cacticola	OC	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+75913|Strongyloides venezuelensis	MC	MC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+77928|Proteomonas sulcata	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+79782|Cimex lectularius	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+81058|Tinctoporellus epimiltinus	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	OI
+82513|Apiotrichum brassicae	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	OI
+83487|Papilio dardanus tibullus	MI	MC	NR	MC	NR	MC	NR	NR	NR	NR	OC
+84753|Moesziomyces antarcticus	MI	MI	OC	MI	OC	MI	OC	OC	OC	MI	OI
+87111|Aplanochytrium kerguelense	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+87257|Evernia prunastri	MI	MI	OI	MI	NR	MI	OI	NR	NR	OI	OI
+88015|Eurytemora affinis	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+88271|Picocystis salinarum	OC	OC	NR	OC	NR	OC	NR	NR	NR	NR	NR
+89487|Basipetospora chlamydospora	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	OI
+89489|Monascus ruber	MI	MI	OC	MI	OC	MI	OC	OC	OC	OC	OC
+89770|Paraphysomonas bandaiensis	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+91422|Polistes metricus	MI	MC	MC	MC	MC	MC	MC	MC	OC	MC	MC
+91928|Exophiala spinifera	MI	OC	OC	OC	NR	OC	NR	NR	NR	OC	OC
+91930|Coniochaeta hoffmannii	MI	MI	NR	MC	NR	MC	NR	NR	NR	NR	MI
+95322|Fragosphaeria purpurea	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+96373|Leptographium lundbergii	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+97093|Trichoderma koningii	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+97331|Arthrobotrys flagrans	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+99802|Spirometra erinaceieuropaei	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+101297|Conus consors	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+106004|Leucosporidium creatinivorum	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+107032|Oikopleura longicauda	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+109331|Citeromyces siamensis	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+111886|Aphantopus hyperantus	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+113399|Amauroascus mutatus	MI	MI	NR	OC	NR	OC	NR	NR	NR	NR	OC
+113606|Tetrapisispora iriomotensis	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+114818|Xylaria longipes	MI	MI	OC	MI	NR	MI	NR	NR	NR	MI	OI
+114840|Erythrobasidium yunnanense	OC	OC	OC	OC	OC	OC	NR	NR	NR	OC	OC
+115357|Harmonia axyridis	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+115425|Cochliomyia hominivorax	MI	MI	NR	MI	NR	MI	NR	NR	NR	OI	OI
+119933|Stemphylium vesicarium	MI	MI	OC	MI	OC	MI	OC	OC	OC	MI	OC
+125945|Drosophila biarmipes	MI	MC	OC	MC	NR	MC	NR	NR	NR	MC	OC
+133408|Acytostelium leptosomum	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+137070|Drosophila tani	MI	MC	MC	MC	MC	MC	MC	MC	OC	MC	OC
+143450|Mycosphaerella arachidis	MI	MI	OI	MI	NR	MI	NR	NR	NR	OI	OI
+143948|Diuraphis noxia	MI	MI	MI	MI	NR	MI	NR	NR	NR	MI	OI
+151077|Chilodonella uncinata	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+152616|Delias pasithoe	MI	OI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+156173|Haptolina brevifila	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+161770|Plectrocnemia conspersa	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+166423|Melipona quadrifasciata	MI	MI	MI	MI	MI	MI	OI	OI	OI	MI	OI
+166479|Homolaphlyctis polyrhiza JEL 142	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+169489|Malassezia dermatis	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+181123|Austropuccinia psidii	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+181874|Panaeolus cyanescens	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+182096|Aspergillus chevalieri	MC	OC	OC	MC	OC	OC	OC	OC	OC	OC	OC
+182846|Calonectria naviculata	MI	MI	NR	MI	NR	MI	NR	NR	NR	OC	MI
+189258|Drosophila micromelanica	MC	MC	MC	MC	MC	MC	MC	MC	OC	MC	OC
+211096|Hanseniaspora opuntiae	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+211522|Acanthamoeba quina	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	MC
+216777|Proboscia alata	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+218633|Cordyceps cicadae	MI	MC	MC	MC	OC	MC	OC	OC	OC	MC	OC
+220873|Tegillarca granosa	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+221942|Setaria equina	MI	MI	OC	MI	OC	MI	OC	OC	OC	OC	OC
+223996|Protocruzia adherens	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+230439|Peronospora tabacina	MI	MI	OC	OC	OC	OC	OC	OC	OC	OC	OI
+230516|Chaetoceros curvisetus	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+230603|Saccharomyces uvarum	MC	MC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+232287|Telonema subtile	MI	NR	OI	NR	NR	NR	NR	NR	NR	NR	NR
+249248|Adineta ricciae	MI	OC	NR	OC	NR	OC	NR	NR	NR	NR	OC
+253104|Hymenoscyphus herbarum	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	OC
+258770|Melampsora medusae f. sp. deltoidis	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+261658|Cavenderia fasciculata	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+264483|Phaffia rhodozyma	OI	OI	OI	OI	OI	OI	OI	OI	OI	OI	OI
+265564|Thalassiosira punctigera	MI	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+268474|Trichinella papuae	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+270529|Tetragonula mellipes	MI	MI	MI	MI	MI	MI	MC	MC	OC	MI	MI
+271357|[Candida] gorgasii	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+278940|Botrytis galanthina	MI	MI	MI	MI	MI	MI	MI	MI	MI	MI	OI
+281687|Caenorhabditis japonica	MC	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+283848|Hyles vespertilio	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	MI
+283909|Capitella teleta	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+285029|Togula jolla	MI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+288516|Diploscapter coronatus	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+292155|Pseudomyrmex dendroicus	MC	MC	MC	MC	MC	MC	MC	MC	OC	MC	MC
+296797|Chlorociboria aeruginascens	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+298378|Fusarium incarnatum	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+307972|Apostichopus japonicus	MI	MC	MC	MC	MC	MC	MC	MC	OC	MC	OC
+315563|Belgica antarctica	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+324742|Martiniozyma abiesophila	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+348837|Spironucleus salmonicida	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+353897|Metschnikowia aberdeeniae	MI	MC	NR	OC	NR	OC	NR	NR	NR	NR	OC
+353899|Metschnikowia shivogae	MC	MC	OC	OC	NR	OC	NR	NR	NR	NR	MC
+357750|Cercospora berteroae	MC	MC	MC	MC	MC	MC	NR	NR	NR	MC	OC
+360147|Ceratocystiopsis minuta	MI	MI	MI	MI	OC	MI	OC	OC	OC	OC	OI
+367775|Cryptococcus gattii WM276	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+373115|Blumeriella jaapii	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+392538|Salmacisia buchloeana	MI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+396416|Bombus pyrosoma	MI	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+401625|Ceraceosorus bombacis	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+429571|Blastocystis sp. subtype 8	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+431595|Globisporangium ultimum DAOM BR144	MI	MI	OC	OC	OC	OC	OC	OC	OC	OC	OI
+433476|Lachancea sp. CBS 6924	MC	MC	NR	OC	NR	OC	NR	NR	NR	NR	OC
+464258|Chloropicon laureae	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+469304|Thecaphora thlaspeos	MI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+470485|Venturia aucupariae	MC	MC	NR	MC	NR	MC	NR	NR	NR	OC	OC
+482145|Aspergillus taichungensis	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	OC
+488016|Kazachstania kunashirensis	MI	MC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+489717|Ambrosiozyma vanderkliftii	MI	OC	NR	OC	NR	OC	NR	NR	NR	NR	NR
+490622|Trichoderma arundinaceum	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+490708|Ogataea nitratoaversa	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+498019|[Candida] auris	MC	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+505693|Chromera velia	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+505711|Andalucia godoyi	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+507511|Hyphopichia heimii	MC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+510516|Aspergillus oryzae RIB40	MC	MC	MC	MC	MC	MC	OC	OC	OC	MC	MC
+515849|Podospora anserina S mat+	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+526221|Verticillium alfalfae VaMs.102	MI	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+537810|Kuraishia ogatae	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+559131|Cryptolaemus montrouzieri	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+566037|Saccharomycetaceae sp. 'Ashbya aceri'	OI	OI	OI	OI	OI	OI	OI	OI	OI	OI	OI
+575412|Acanthoscurria geniculata	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+576137|Phialocephala subalpina	MI	MI	OC	MI	NR	MI	NR	NR	NR	NR	OI
+578455|Thermothielavioides terrestris NRRL 8126	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	MI
+578457|Serpula lacrymans var. lacrymans S7.9	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+595635|Phyllosticta citriasiana	MC	MC	OC	MC	OC	MC	OC	OC	OC	OC	OC
+596104|Phytophthora multivora	MC	MC	MC	MC	MC	MC	OC	OC	OC	OC	OC
+613905|Nylanderia fulva	MI	MI	NR	MI	NR	MI	NR	NR	NR	OI	MI
+637853|Gongylonema pulchrum	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+644358|Magnaporthiopsis poae ATCC 64411	MI	MI	MI	MI	OC	MI	OC	OC	OC	OC	OC
+652834|Palpitomonas bilix	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+658473|Mycena chlorophos	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+663331|Trichophyton benhamiae CBS 112371	MI	MC	MC	MI	MC	MC	MC	MC	MC	OC	OC
+665024|Bipolaris maydis ATCC 48331	MI	MC	MC	MC	MC	MC	OC	OC	OC	MC	OC
+684364|Batrachochytrium dendrobatidis JAM81	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+690910|Lymantria dispar dispar	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+691171|Tuber umbilicatum	MC	MC	NR	MC	NR	MC	NR	NR	NR	MC	OC
+693967|Pentalonia nigronervosa	MI	MI	OI	MI	OI	MI	NR	NR	NR	MI	OI
+708627|Timspurckia oligopyrenoides	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+714620|Torymus auratus	MI	MI	OC	OC	OC	OC	OC	OC	OC	OC	MI
+765257|Pisolithus microcarpus 441	MI	OC	OC	OC	OC	OC	NR	NR	NR	OC	OC
+766055|Microcyclospora pomicola	MI	OC	NR	OC	NR	OC	NR	NR	NR	OC	OC
+797268|Paecilomyces hepiali	MI	MI	MI	MI	OI	MI	OI	OI	OI	OI	OI
+877506|Claviceps paspali RRC 1481	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	MI
+904239|Lactifluus pinguis	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+904709|Chaetomium cochliodes	MI	MI	OC	MI	OC	MI	OC	OC	OC	OC	OC
+907947|Phytopythium vexans	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+909788|Ormyrus pomaceus	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+933084|Jaapia argillacea MUCL 33604	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+985143|Zymoseptoria pseudotritici STIR04_4.3.1	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	OC
+1003142|Triceratium dubium	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1016881|Ascocoryne sarcoides NRRL 50072	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1031333|Rhizomucor miehei CAU432	MI	OC	OC	OC	NR	OC	NR	NR	NR	NR	OC
+1036762|Epichloe brachyelytri E4804	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+1042828|Stygamoeba regulata	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1049056|Panopea generosa	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1073089|Aspergillus wentii DTO 134E9	MI	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1086592|Cataglyphis hispanica	MI	MI	OC	MI	OC	MI	OC	OC	OC	MI	OC
+1116229|Glarea lozoyensis ATCC 20868	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1130832|Rhodotorula toruloides NP11	MI	MC	NR	MC	NR	MC	NR	NR	NR	NR	OC
+1133968|Babesia microti strain RI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1136866|Hysterium pulicare CBS 123377	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1138374|Nematocida sp. 1 ERTm6	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1147111|Fusarium euwallaceae	MC	MC	MC	MC	MC	MC	MC	MC	OC	MC	MC
+1160497|Aspergillus glaucus CBS 516.65	MI	MC	MC	MC	MC	MC	MC	MC	MC	MC	OC
+1174670|Fusarium azukicola	MI	MC	MC	MC	OC	MC	MC	OC	OC	OC	MC
+1182544|Cladophialophora yegresii CBS 114405	MI	MI	OC	MI	OC	MI	NR	NR	NR	OC	OC
+1186058|Trichosporon asahii var. asahii CBS 2479	MI	MC	MC	MC	OC	MC	OC	OC	OC	MC	OC
+1194294|Hartaetosiga balthica	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1196081|Talaromyces amestolkiae	MI	MI	OC	MI	NR	MI	NR	NR	NR	NR	OI
+1218281|Limnephilus lunatus	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1223556|Pythium arrhenomanes ATCC 12531	MI	MC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1227346|Fusarium proliferatum ET1	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+1230383|Malassezia sympodialis ATCC 42132	MC	MC	OC	OC	NR	OC	NR	NR	NR	OC	OC
+1246795|Nutomonas longa	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1250544|Sphaerosporella brunnea	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1266684|Ophiothrix spiculata	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1266744|Talaromyces purpureogenus	MI	MI	MI	MI	MI	MI	NR	NR	NR	MI	OI
+1274791|Apophysomyces elegans B7760	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+1279116|Nakaseomyces bacillisporus CBS 7720	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1303197|Leishmania sp. MAR LEM2494	MC	OC	NR	OC	NR	OC	NR	NR	NR	NR	NR
+1314790|Basidiobolus meristosporus CBS 931.73	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1316194|Penicillium subrubescens	MI	MC	OC	MC	OC	MC	NR	NR	NR	MC	OC
+1323128|Limacina bulimoides	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1332765|Glaciozyma antarctica PI12	MI	MI	NR	OI	NR	OI	NR	NR	NR	NR	OI
+1347389|Colletotrichum sidae	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+1353255|Gyalolechia flavorubescens KoLRI002931	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1390368|Takashimella koratensis	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1439351|Penicillium carneum LCP05634	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+1442369|Rhinocladiella mackenziei CBS 650.93	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1447872|Emergomyces pasteurianus Ep9510	MI	MI	OC	MI	NR	MI	NR	NR	NR	MI	OI
+1447875|Helicocarpus griseus UAMH5409	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	OI
+1448308|Corynespora cassiicola Philippines	MI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1448321|Aspergillus heteromorphus CBS 117.55	MI	MC	NR	MC	NR	MC	NR	NR	NR	OC	OC
+1450535|Aspergillus sclerotioniger CBS 115572	MI	MC	OC	MC	OC	MC	OC	OC	OC	MC	OC
+1457509|Amanita brunnescens Koide BX004	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1503927|Hemistasia phaeocysticola	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1507135|Euglossa dilemma	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+1509407|Aspergillus nomius NRRL 13137	MC	MC	MC	MC	OC	MC	OC	OC	OC	OC	OC
+1540335|Yarrowia porcina	MC	MC	NR	MC	NR	MC	NR	NR	NR	NR	OC
+1573607|Schizochytrium sp. CCTCC M209059	OI	OI	OI	OI	OI	OI	OI	OI	OI	OI	OI
+1578925|Pyricularia pennisetigena	MI	MI	MC	MI	OC	MI	NR	NR	NR	MI	OC
+1580837|Davidsoniella virescens	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+1585795|Colletotrichum lentis	MC	MC	MC	MC	MC	MC	OC	OC	OC	MC	OC
+1604332|Fusarium pininemorale	MC	MC	MC	MC	MC	MC	MC	MC	OC	MC	MC
+1608916|Laparus doris doris	MI	MI	NR	MI	NR	MI	NR	NR	NR	OI	OI
+1635098|Yarrowia keelungensis	MC	MC	MC	MC	MC	MC	MC	MC	OC	OC	OC
+1667614|Cyberlindnera xylosilytica	MI	MC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1671306|Pseudophaeomoniella oleicola	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1673888|Violaceomyces palustris	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1701548|Spathaspora boniae	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1736112|Platysulcus tardus	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1745343|Pezoloma ericae	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	MI
+1775427|Amoebophrya sp. AT5.2	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1810908|Aspergillus spinulosporus	MC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+1813822|fungal sp. No.14919	MI	MI	OI	MI	OI	MI	OI	OI	OI	OI	OI
+1858805|Dacryopinax primogenitus	OI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1882922|Taenaris catops	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1907219|Piptocephalis cylindrospora	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1928486|Mylnosiga fluctuans	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1965070|Dinothrombium tinctorium	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1977532|Sericostoma sp. HW-2014	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1986089|Cyanodermella asteris	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+1993908|Parvularia atlantis	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+2010997|Calephelis virginiensis	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+2021029|Didymella segeticola	MI	MI	NR	MI	NR	MI	NR	NR	NR	NR	OI
+2027527|Escovopsis sp. Ae720	MC	MC	OC	MC	NR	MC	NR	NR	NR	NR	MC
+2036197|Raffaelea sp. RL272	MI	MI	NR	MI	NR	MI	NR	NR	NR	OC	OI
+2039271|Pseudozyma sp. F8B2	MI	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+2041167|Chlorella sp. A99	MI	OC	NR	NR	NR	NR	NR	NR	NR	NR	NR
+2056393|Chloroidium sp. JM	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+2056398|Dunaliella sp. YS1	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+2056399|Haematococcus sp. NG2	MI	MI	NR	MI	NR	MI	NR	NR	NR	OI	OI
+2172886|Aurantiochytrium acetophilum	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC	OC
+2184023|Aspergillus olivimuriae	MI	MI	NR	OC	NR	OC	NR	NR	NR	NR	OC
+2259054|Metschnikowia citriensis	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC	MC
+2283846|Lachnum nothofagi	MI	OI	NR	NR	NR	NR	NR	NR	NR	NR	OI
+2292721|Alatinidae sp. Z8VKAUB7J3	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+2509265|Prototheca bovis	MI	MC	NR	OC	NR	OC	NR	NR	NR	NR	OC
+2562755|Metschnikowia sp. JCM 33374	MI	NR	NR	NR	NR	NR	NR	NR	NR	NR	NR
+2590006|Ostreococcus sp. SAG11	OC	NR	OC	OC	NR	NR	OC	NR	NR	NR	NR
+2601844|Picochlorum sp. BH-2019	MI	MI	MI	MI	MI	MI	MI	MI	MI	MI	MI
+2605667|Achatina immaculata	OI	OI	NR	NR	NR	NR	NR	NR	NR	NR	NR

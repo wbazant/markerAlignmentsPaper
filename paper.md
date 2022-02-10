@@ -76,25 +76,15 @@ For each remaining taxon cluster that has least four markers and eight reads, jo
 <!-- It is possible a reviewer will ask you how you arrived at the numbers "four" and "eight". Not something to worry about for now but just noting you may have to produce some sort of graph that shows why those nujmbers are optimal. -->
 
 ### Simulated samples with unknown species
-<!-- I think this should come before the Our Method section, since it is only about eukdetect  -->
-We first asked how EukDetect would handle reads from unknown taxa, so we designed an experiment to test how the algorigm performs when given unknown species. We divide the reference set into a smaller reference and a hold-out set that we use to verify unknown organism detection. We prepared 338 simulated samples, each with one "unknown" species (chosen from the hold-out set) at 0.1 coverage. 
+We first want to show how EukDetect would handle reads from unknown taxa through witholding some known sequences from the reference. We divide the reference set into a smaller reference and a hold-out set that we use to verify unknown organism detection. We then sample from the hold-out set to prepare 338 simulated samples, each with one "unknown" species at 0.1 coverage. 
 
-After running both algorithms on these simulated samples, we observed that EukDetect does not show a consistent behaviour when faced with species not in its reference. Indeed, for 219 samples the result was an empty list, for 76 samples we recover one taxon of the same genus as the source species in the hold-out set, for 17 samples we recover one taxon that is of a different genus, and for 26 samples the results list contains more than one taxon. 
+These inputs give alignments in all but 58 (17%) cases, but EukDetect reports no results in 221 (65%) cases. We obtain the same list of no results with just three filters: to keep only taxa with alignments to at least two markers, to keep only taxa with at least four alignments, and to keep only reads with MAPQ >= 30. Applying different combinations of these filters shows that it is the MAPQ >= 30 filter that is responsible for most dropout: the other two filters together only drop 132 (39%) samples, but just the MAPQ >= 30 filter alone drops 186 (55%) samples.
 
-We expose which parts of EukDetect's functionality influence this behaviour the most by running `bowtie2`, applying some of its filters ourselves, and counting non-empty results among the 338 samples. We find:
-1. No filtering: 301 non-empty results
-2. MAPQ >= 30: 156 non-empty results
-3. MAPQ >= 30, two markers: 133 non-empty results
-4. MAPQ >= 30, two markers, four reads (same as all of EukDetect): 119 non-empty results
-5. two markers, four reads: 206 non-empty results
+Modifying EukDetect to filter on MAPQ >= 5 is not an adequate adjustment. While it improves the tool's ability to recognise eukaryotic signal in the sample, it compromises the tool's ability to recognise that this signal consists of only a single species. Our method maintains the second metric while improving the first one - the values for EukDetect, modified EukDetect, and our method are respectively 35%, 47%, 61% for fractions of samples where signal is detected and 81%, 60%, 80% for fractions of detected signal reported as one species.
 
-Re-running EukDetect modified to filter on MAPQ >= 5 leads to fewer instances a taxon is skipped, but more instances one taxon is reported as many - we see an empty list of results for 178 samples, 78 of one taxon of the same genus, 13 of one taxon of a different genus, and 69 of more than one taxon.
-<!-- Why isn't the MAPQ >= 5 included in the above list? Could it be included and then there is this additional detail? It currently sort of jumps out of nowhere -->
 
-In summary, we find that EukDetect's capacity to report on non-reference species is limited by its MAPQ >= 30 filter. 
-<!-- Reviewers may nitpick at the "applying some of its filters" and then the stark conclusion that EukDetect's ability to report unknown species is definitely the mapq filter. Maybe it was some other filter you didn't test? Consider specifying which exact filters were tested and why some weren't. -->
+![**Simulated unknown taxa**](figures/dropoutForFilters.png)
 
-![**Figure 0: MAPQ >= 30 filter is responsible for most dropout** Effects of filters](figures/dropoutForFilters.png)
 \newpage
 
 ### Simulated reads and references

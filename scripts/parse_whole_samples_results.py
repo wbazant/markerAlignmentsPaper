@@ -87,6 +87,8 @@ header = [
 "Many results, correct genus",
 "One result, incorrect genus",
 "Many results, incorrect genus",
+"Signal detected",
+"Detected signal is one species"
 ]
 header_shortcuts = {
         "No results": "NR",
@@ -95,6 +97,11 @@ header_shortcuts = {
         "One result, incorrect genus": "OI",
         "Many results, incorrect genus": "MI",
 }
+
+def add_stats(counts):
+    s = sum(counts.values())
+    counts["Signal detected"] = round(1.0 * (s - counts["No results"] ) / s, 3)
+    counts["Detected signal is one species"] = round(1.0 * (counts["One result, correct genus"] + counts["One result, incorrect genus"]) / (s - counts["No results"]), 3)
 
 def sc(all_results, input_file, taxid):
     if taxid not in all_results[input_file]:
@@ -142,6 +149,8 @@ def do_one(scrambled_name_to_taxid, ncbi, input_file):
                 raise ValueError(input_file, xs, l)
             counts[c]+=1
             cs_for_species[source_taxid] = c
+
+    add_stats(counts)
     return counts, cs_for_species
 
 def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
@@ -171,6 +180,8 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
 
     lines.append("# Values legend: ")
     for h in header:
+        if h not in header_shortcuts:
+            continue
         lines.append("# " + header_shortcuts[h] + ": " + h)
 
     lines.append("#")

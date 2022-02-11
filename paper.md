@@ -76,7 +76,8 @@ For each remaining taxon cluster that has least four markers and eight reads, jo
 <!-- It is possible a reviewer will ask you how you arrived at the numbers "four" and "eight". Not something to worry about for now but just noting you may have to produce some sort of graph that shows why those nujmbers are optimal. -->
 
 ### Simulated samples with unknown species
-We first want to show how EukDetect would handle reads from unknown taxa through witholding some known sequences from the reference. We divide the reference set into a smaller reference and a hold-out set that we use to verify unknown organism detection. We then sample from the hold-out set to prepare 338 simulated samples, each with one "unknown" species at 0.1 coverage. 
+
+We first show how EukDetect would handle reads from unknown taxa by running it on known sequences witholded from the reference. We divide the reference set into a smaller reference and a hold-out set that we use to verify unknown organism detection. We then sample from the hold-out set to prepare 338 simulated samples, each with one "unknown" species at 0.1 coverage. 
 
 These inputs give alignments in all but 58 (17%) cases, but EukDetect reports no results in 221 (65%) cases. We obtain the same list of no results with just three filters: to keep only taxa with alignments to at least two markers, to keep only taxa with at least four alignments, and to keep only reads with MAPQ >= 30. Applying different combinations of these filters shows that it is the MAPQ >= 30 filter that is responsible for most dropout: the other two filters together only drop 132 (39%) samples, but just the MAPQ >= 30 filter alone drops 186 (55%) samples.
 
@@ -88,9 +89,9 @@ Modifying EukDetect to filter on MAPQ >= 5 is not an adequate adjustment. While 
 \newpage
 
 ### Simulated reads and references
-<!-- Let's add a transition sentence like okay we know it's the mapq filter so let's understand this better? -->
-We devise a simulation procedure based on sourcing reads from a reference and aligning them back to a version of the reference which lets us capture properties of alignments in various degrees of difference between sequenced material and available reference. We use it in four contexts: 
-1. reads sampled from the whole reference and then mapped back to it (an optimal case we might expect in real data),
+<!-- work on the logical transition here --!>
+The demonstrated importance of MAPQ >= 30 filter in alignments of novel species leads us to a study of this property in simulated reads. Sourcing reads from a reference and aligning them back to a version of the reference lets us capture properties of alignments in various degrees of difference between sequenced material and available reference. We use it in four contexts: 
+1. reads sampled from the whole reference and then mapped back to it (an optimistic approximation of data from well-studied environments),
 2. reads sampled and mapped back to a small duplicated reference (regions of higher resolution in the reference),
 3. reads sampled from the whole reference which are then modified (a more realistic case where a sampled organism is of a different strain to the reference), and
 4. reads from a hold-out set mapped to the remaining set (a case of unknown species).
@@ -101,7 +102,8 @@ In the most favourable case where a species in a sample is also present in the r
 
 The degree of improvement achieved in this way turns out to depend on the source taxon of the reads (Fig. 1). Out of 3977 taxa whose reads map back to the reference, reads from 1908 map with 100% precision. After applying the MAPQ >= 30 filter, 1105 more taxa map with 100% precision, but 146 taxa still have precision worse than the pre-filter average of 95.1%. In the case of five taxa (*Fusarium cf. fujikuroi NRRL 66890, Escovopsis sp. Ae733, Favella ehrenbergii, Leishmania peruviana, Mesodinium rubrum*) applying the filter decreases precision, and for one taxon (*[Chlamydomonas] debaryana var. cristata*) applying the filter removes all reads.
 
-![**Figure 1: The improvement from a MAPQ >= 30 filter varies by species.** Precision and fraction of reads with MAPQ >= 30, each dot is source taxon](figures/precisionBySpecies.png)
+![**The improvement from a MAPQ >= 30 filter varies by species.**](figures/precisionBySpecies.png)
+
 <!-- Each figure will likely need a title. The title should be a full sentence that describes the main takeaway of the figure. -->
 
 A version of the reference in which a smaller amount of sequences are included twice (context 2) shows a small amount of redundancy in reference sequences and does not compromise same-species precision or same-species recall (both are 99.6%). However, it renders MAPQ values unusable, making them almost uniformly 0 or 1.

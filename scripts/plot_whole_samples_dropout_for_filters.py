@@ -59,7 +59,7 @@ def main(argv=sys.argv[1:]):
     d = u.plot(fig)
     fig.delaxes(d['totals'])
     d['extra0'].legend(bbox_to_anchor=(-0.1, 1.0))
-#    d['intersections'].set_ylim([0,1])
+#    d['extra0'].set_ylim([0,nrows])
 #    d['intersections'].set_ylabel("Samples with no results")
     fig.savefig(options.output_path, bbox_inches='tight', dpi=199)
     #from PIL import Image

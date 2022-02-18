@@ -128,11 +128,10 @@ Our method differs from EukDetect on how it treats signal that might be from mul
 - in sample G78500, EukDetect reports *Saccharomyces cerevisiae* and *Kazachstania unispora*, which our method reports to be just a non-reference *Saccharomyces cerevisiae*, and
 - in sample G80329, our method agrees with EukDetect about *Candida parapsilosis*, and reports an additional *C. albicans*.
 
-We also compare our pipeline with [@nash2017gut], who analyse WGS samples from the Human Microbiome Project [@turnbaugh2007human] with a pipeline based on alignments to a reference of 1315 whole fungal genomes that were depleted of regions similar to bacteria, which are then refined through removing hits which also match reads in non-redundant bacterial databases. TODO
+We also compare our pipeline with [@nash2017gut], who search for fungal reads in WGS data in Human Microbiome Project [@turnbaugh2007human] through alignments to a reference of 1315 whole fungal genomes depleted of regions that might be bacterial, which are then refined through removing hits which also match reads in non-redundant bacterial databases. Their method assigns reads to 268 different species in 380 out of 472 tested samples, which aggregated by read and sample gives 1487 data points. 
 
-The next study we use to evaluate our results is the 146 stool samples of healthy volunteers from Human Microbiome Project [@turnbaugh2007human], as analysed by [@nash2017gut] who compare the same stool samples sequenced with and without amplification of the fungal ITS2 region (WGS vs. ITS2). One of the authors' conclusions is that the sequencing depth in HMP was not sufficient to detect fungal taxa with WGS - they find *S. cerevisiae* in almost all 96.8% 
+Applying our method to 380 samples where the authors found fungi produces a much narrower list of species, but less data, as we identify 25 fungal species in 96 of the samples: a total 121 data points. The lower number of samples where any fungi are found points to lower sensitivity of our method, and we estimate the recall of our method to be about 4% for this data source based on *Saccharomyces cerevisiae* being reported only 18 times by us while probably being present in most samples as evidenced by the authors finding *Saccharomyces* in 96.8% of their ITS results. Nevertheless, the results we produce are broadly in agreement, since we replicate the authors' finding about four most prevalent genera in the samples being *Malassezia*, *Saccharomyces*, *Cyberlindnera*, and *Candida*. Comparing top hits in 96 samples where there is data for both sources gives 29 species level agreements, and 42 genus level agreements about top hit being *Malassezia* (we see *M. restricta*, the authors mostly *M. globosa*). In samples where top hits in both sources are for the same species, counts of reads follow a linear relationship - least squares regression R-squared value is 0.998 with coefficient = 0.0309 and n = 27 - that is to say, the number of reads we align to EukDetect's marker sequences is about 3% of reads reported by the authors.
 
-with sensitivity achieved by ITS2 sequencing - only 15 / 146 of stool samples in the Human Microbiome Project report *S. cerevisiae*, a ubiquitous yeast that [@nash2017gut] also found in only a fraction of the samples with WGS. found in the majority of the samples with ITS2, but only in a fraction of the samples with WGS.
 
 <!-- This was interesting at a time, but loses focus -->
 <!-- While the picture our results draw is not complete, they contain enough information to generate hypotheses and further leads. Findings of eukaryotes that can potentially cause disease include a protozoan *Trichomonas tenax* in two oral samples, and 4 / 10 of samples from the subject ID 246515023 contain a disease-causing fungus *Aspergillus fumigatus*. -->
@@ -144,7 +143,6 @@ Finally, we process infant stool samples from the Preterm Infant Resistome study
 <!-- say that from here on out all mbioDB data will be processed like this. -->
 Starting with Release 25 (2 Dec 2021), all whole genome sequencing data available on our site, MicrobiomeDB - 5113 samples in Release 25 - is additionally profiled for presence of eukaryotes. 
 
-<!-- I'm not worrying too much about verb tenses right now - eventually we'll have to go back and make sure they all are the same present tense. -->
 
 ## Discussion
 

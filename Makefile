@@ -109,7 +109,7 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 	python3 scripts/plot_bars.py --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-png figures/barsLeaveOneOut.png 
 
 figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
-	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species
+	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species --output-tsv supplement/precisionBySpecies.tsv
 
 figures/dropoutForFilters.png: supplement/wgsimWholeSamplesOneTenthCoverage.tsv
 	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv --output-png figures/dropoutForFilters.png

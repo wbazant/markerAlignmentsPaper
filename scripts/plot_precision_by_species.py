@@ -19,13 +19,14 @@ from marker_alignments.store import SqliteStore
 from ete3 import NCBITaxa
 #pandas.read_sql_query(sql)
 
+#  1.0 * sum(mapq_at_least_30) / count(*) as fraction_mapq_at_least_30,
+
 sql = '''
 select 
   source_taxon,
   avg(mapq) as avg_mapq,
-  1.0 * sum(mapq_at_least_30) / count(*) as fraction_mapq_at_least_30,
   1.0 * sum(is_match) / count(*) as precision,
-  1.0 * sum(is_match_and_mapq_at_least_30) / sum(mapq_at_least_30) as precision_mapq_at_least_30
+  case when sum(mapq_at_least_30) == 0 then 0 else 1.0 * sum(is_match_and_mapq_at_least_30) / sum(mapq_at_least_30) end as precision_mapq_at_least_30
 from (
   select
     a.query,
@@ -54,8 +55,15 @@ def match_types(same_what):
 def get_data(input_db, same_what, refdb_ncbi, **kwargs):
     ncbi = NCBITaxa(refdb_ncbi)
     df = pandas.read_sql_query(sql.format(MATCH_TYPE_CLAUSE=match_types(same_what)), sqlite3.connect(input_db))
+    t = ncbi.get_taxid_translator(set(df["source_taxon"].values))
+
+    df["source_taxon_name"] = df["source_taxon"].apply(lambda x: t[int(x)])
     df['kingdom'] = [get_kingdom(ncbi, x) for x in df['source_taxon']]
-    df['delta_precision'] = df['precision_mapq_at_least_30'] - df['precision']
+    #df['delta_precision'] = df['precision_mapq_at_least_30'] - df['precision']
+
+    cols = df.columns.tolist()
+    cols = [cols[0]] + cols[-2:] + cols[1:-2]
+    df = df[cols]
 
     print("All taxa that map: " + str(len(df)))
     print("Taxa that map perfectly: " + taxa_that_map_perfectly(ncbi, df))
@@ -127,9 +135,10 @@ def plot_group(plt, groups, group, color, ax):
     ax.set_xlabel("Precision")
     ax.set_ylabel("Precision when MAPQ >= 30")
 
-def do(input_db, same_what, refdb_ncbi, output_png):
+def do(input_db, same_what, refdb_ncbi, output_png, output_tsv):
 
     df = get_data(input_db, same_what, refdb_ncbi)
+    df.to_csv(output_tsv, sep = "\t", float_format='%.3f', index = False)
 
     fig, axs = plt.subplots(2, 2)
 # no legend!
@@ -169,7 +178,8 @@ def opts(argv):
     )
     parser.add_argument("--input-alignments-sqlite", type=str, action="store", dest="input_db", required=True)
     parser.add_argument("--output-png", type=str, action="store", dest="output_png", required=True)
-    parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa")
+    parser.add_argument("--output-tsv", type=str, action="store", dest="output_tsv", required=True)
+    parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa", required = True)
 
     parser.add_argument("--aggregation-level", type=str, action="store", dest="same_what", required=True)
     return parser.parse_args(argv)

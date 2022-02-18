@@ -4,3 +4,6 @@ tmp
 tmpLeaveOneOut
 unknownEuks
 unknownEuksUnmodifiedEukdetect
+*pyc
+__pycache__
+nash_et_al-comparison/tmp

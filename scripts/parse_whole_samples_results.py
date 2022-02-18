@@ -1,6 +1,8 @@
 import sys
 import re
 import os
+sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), "../"))
+from lib.ncbi2 import NCBITaxa2
 import argparse
 import pysam
 import re
@@ -11,7 +13,6 @@ import subprocess
 import sqlite3
 
 from marker_alignments.store import SqliteStore
-from ete3 import NCBITaxa
 
 from pathlib import Path
 
@@ -48,28 +49,6 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
 
     return result
 
-trad_ranks = {"superkingdom", "kingdom", "phylum", "class", "order", "family", "genus", "species"}
-
-def base_taxid(ncbi, taxids):
-    tree = ncbi.get_topology(taxids)
-    r = tree.get_tree_root()
-    return str(r.name)
-
-def get_match_type(ncbi, taxids):
-    tree = ncbi.get_topology(taxids)
-
-    r = tree.get_tree_root()
-    if hasattr(r, 'rank') and r.rank in trad_ranks:
-        result = r.rank
-    else:
-        lineage = ncbi.get_lineage(r.name)
-        ranks = ncbi.get_rank(lineage)
-        ranks_increasing = [ranks[x] for x in reversed(lineage) if ranks[x] in trad_ranks]
-
-        if not ranks_increasing:
-            raise ValueError(lineage, ranks)
-        result = ranks_increasing[0]
-    return result
 
 def ct(n, rank):
     if n == 1 and rank == "genus":
@@ -108,29 +87,15 @@ def sc(all_results, input_file, taxid):
         return "XX"
     return header_shortcuts[all_results[input_file][taxid]]
 
-# it could start with a ?
-# if yes, it could be a list of comma-separated results
-# it could have taxid at the beginning
-def get_taxid_from_string(ncbi, x):
-    if x[0] == '?':
-        ids = [get_taxid_from_string(ncbi, _x) for _x in x[1:].split(",")]
-        return base_taxid(ncbi, ids)
-
-    if len(x.split("|")) > 1:
-        return x.split("|")[0]
-
-    name2taxid = ncbi.get_name_translator([x])
-    vs = [x for xx in name2taxid.values() for x in xx]
-    return vs[0]
 
 def do_one_line(scrambled_name_to_taxid, ncbi, xs):
     source_taxon = xs.pop(0)
     source_taxid = scrambled_name_to_taxid[source_taxon]
     n = int(xs.pop(0))
     if n:
-        vs = [get_taxid_from_string(ncbi, x) for x in xs]
+        vs = [ncbi.get_taxid_from_string(x) for x in xs]
         vs.append(str(source_taxid))
-        rank = get_match_type(ncbi, vs)
+        rank = ncbi.get_match_type(vs)
         return source_taxid, ct(n, rank)
     else:
         return source_taxid, "No results"
@@ -156,7 +121,7 @@ def do_one(scrambled_name_to_taxid, ncbi, input_file):
 def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
     scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
 
-    ncbi = NCBITaxa(refdb_ncbi)
+    ncbi = NCBITaxa2(refdb_ncbi)
     lines = []
     lines.append("# Summary: ")
     lines.append("# | Name | " + " | ".join(header) + " |")
@@ -195,7 +160,7 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
 
 def main(argv=sys.argv[1:]):
     parser = argparse.ArgumentParser(
-      description="simulate_and_align",
+      description="parse_whole_samples_results",
       formatter_class = argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--refdb-marker-to-taxon-path", type=str, action="store", dest="refdb_marker_to_taxon_path", help = "Lookup file, two columns - marker name, taxon name", required = True)

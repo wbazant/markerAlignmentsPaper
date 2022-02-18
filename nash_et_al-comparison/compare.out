@@ -1,0 +1,50 @@
+Nash species: 268
+Nash samples: 380
+Nash data points: 1487
+Our species: 25
+Our samples: 96
+Our data points: 121
+Match types of top hits: 
+Match_type  Match_parent             
+genus       Malassezia                   42
+kingdom     Fungi                        28
+species     Saccharomyces cerevisiae     12
+            Cyberlindnera jadinii         7
+            Malassezia globosa            4
+order       Saccharomycetales             3
+species     Schizosaccharomyces pombe     2
+            Candida tropicalis            2
+            Candida albicans              2
+phylum      Ascomycota                    2
+genus       Alternaria                    2
+            Aspergillus                   1
+dtype: int64
+Regression on matching species - Nash vs us: 
+<class 'statsmodels.iolib.summary.Summary'>
+"""
+                                 OLS Regression Results                                
+=======================================================================================
+Dep. Variable:               value_us   R-squared (uncentered):                   0.998
+Model:                            OLS   Adj. R-squared (uncentered):              0.998
+Method:                 Least Squares   F-statistic:                          1.463e+04
+Date:                Thu, 17 Feb 2022   Prob (F-statistic):                    2.67e-37
+Time:                        11:48:17   Log-Likelihood:                         -108.29
+No. Observations:                  27   AIC:                                      218.6
+Df Residuals:                      26   BIC:                                      219.9
+Df Model:                           1                                                  
+Covariance Type:            nonrobust                                                  
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+value_nash     0.0309      0.000    120.952      0.000       0.030       0.031
+==============================================================================
+Omnibus:                       50.752   Durbin-Watson:                   2.292
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):              295.570
+Skew:                           3.543   Prob(JB):                     6.57e-65
+Kurtosis:                      17.578   Cond. No.                         1.00
+==============================================================================
+
+Notes:
+[1] R² is computed without centering (uncentered) since the model does not contain a constant.
+[2] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+"""

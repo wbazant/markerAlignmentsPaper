@@ -74,6 +74,9 @@ tmp:
 tmp/wgsimMutationRate.json: tmp refdb/ncbi_eukprot_met_arch_markers.fna
 	python3 scripts/simulate_and_align.py --refdb-ncbi refdb/taxa.sqlite --refdb-marker-to-taxon-path refdb/busco_taxid_link.txt --reference refdb/ncbi_eukprot_met_arch_markers.fna --sim-source refdb/ncbi_eukprot_met_arch_markers.fna --dir tmp --verbose --read-lengths 100 --base-error-rates 0.0 --mutation-rates 0.0 0.001 0.01 0.025 0.05 0.075 0.1 0.125 0.15 0.175 0.2 > tmp/wgsimMutationRate.json
 
+tmp/precisionBySpecies.tsv: tmp/wgsimMutationRate.json
+	python3 scripts/sqlite_to_precision_by_species_tsv.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --refdb-ncbi refdb/taxa.sqlite --aggregation-level species --output-tsv tmp/precisionBySpecies.tsv
+
 tmpDoubled:
 	mkdir -pv tmpDoubled
 
@@ -85,6 +88,9 @@ tmpLeaveOneOut:
 
 tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json: tmpLeaveOneOut refdbCrossValidation/nineTenth.fna.1.bt2
 	python3 scripts/simulate_and_align.py --refdb-ncbi refdb/taxa.sqlite --refdb-marker-to-taxon-path refdb/busco_taxid_link.txt --reference refdbCrossValidation/nineTenth.fna --sim-source refdbCrossValidation/oneTenth.fna --dir tmpLeaveOneOut --verbose --read-lengths 100 --base-error-rates 0.0 --mutation-rates 0.0 0.01 0.025 0.05 0.075 0.1 0.125 > tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
+
+tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
+	python3 scripts/sqlite_to_precision_by_species_tsv.py --input-alignments-sqlite tmpLeaveOneOut/100.0.0.0.0.alignments.sqlite --refdb-ncbi refdb/taxa.sqlite --aggregation-level genus --output-tsv tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv
 
 figures/wgsimMutationRate.png: tmp/wgsimMutationRate.json
 	mkdir -pv figures
@@ -108,6 +114,7 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 	mkdir -pv figures
 	python3 scripts/plot_bars.py --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-png figures/barsLeaveOneOut.png 
 
+# deprecated - Dan made a better figure
 figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
 	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species --output-tsv supplement/precisionBySpecies.tsv
 
@@ -126,5 +133,15 @@ supplement/wgsimDoubled.tsv: tmpDoubled/wgsimMutationRate.json
 	mkdir -pv supplement
 	python3 scripts/wgsim_to_tsv.py  --input-json tmpDoubled/wgsimMutationRate.json --output-tsv supplement/wgsimDoubled.tsv
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv figures/dropoutForFilters.png
+supplement/simulatedReads.xlsx: tmp/wgsimMutationRate.json tmp/precisionBySpecies.tsv tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv
+	python3 scripts/make_simulated_whole_reads_spreadsheet.py \
+		--input-tsv-for-per-species-tab "Whole reference:tmp/precisionBySpecies.tsv" \
+		--input-tsv-for-per-species-tab "Hold-out to remaining:tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv" \
+  	--input-json-for-stats-tab "Whole reference:tmp/wgsimMutationRate.json" \
+		--input-json-for-stats-tab "Hold-out to remaining:tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json" \
+		--stats-tab-name "Stats" \
+		--output-xlsx tmp.xlsx	&& mv tmp.xlsx supplement/simulatedReads.xlsx
+
+
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

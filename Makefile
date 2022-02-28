@@ -52,7 +52,7 @@ unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.
 
 
 
-supplement/wgsimWholeSamplesOneTenthCoverage.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv
+unknownEuksBowtie2/results-summary-all.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv
 	python3 scripts/parse_whole_samples_results.py \
 		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
 		--refdb-ncbi refdb/taxa.sqlite \
@@ -66,7 +66,10 @@ supplement/wgsimWholeSamplesOneTenthCoverage.tsv: unknownEuks/results-summary.ts
 		--input "m2r4M30:unknownEuksBowtie2/results/m2r4M30.results-summary.tsv" \
 		--input "EukDetect:unknownEuksUnmodifiedEukdetect/results-summary.tsv" \
 		--input "modified EukDetect (MAPQ>=5):unknownEuks/results-summary.tsv" \
-		--input "our method:unknownEuksBowtie2/results/our-method.results-summary.tsv" > supplement/wgsimWholeSamplesOneTenthCoverage.tsv
+		--input "our method:unknownEuksBowtie2/results/our-method.results-summary.tsv" \
+		--output-tsv unknownEuksBowtie2/results-summary-all.tsv \
+		--output-xlsx supplement/wgsimWholeSamplesOneTenthCoverage.xlsx
+
 
 tmp:
 	mkdir -pv tmp
@@ -118,8 +121,8 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
 	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species --output-tsv supplement/precisionBySpecies.tsv
 
-figures/dropoutForFilters.png: supplement/wgsimWholeSamplesOneTenthCoverage.tsv
-	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv --output-png figures/dropoutForFilters.png
+figures/dropoutForFilters.png: unknownEuksBowtie2/results-summary-all.tsv
+	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv unknownEuksBowtie2/results-summary-all.tsv --output-png figures/dropoutForFilters.png
 
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
 	mkdir -pv supplement
@@ -143,5 +146,5 @@ supplement/simulatedReads.xlsx: tmp/wgsimMutationRate.json tmp/precisionBySpecie
 		--output-xlsx tmp.xlsx	&& mv tmp.xlsx supplement/simulatedReads.xlsx
 
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv supplement/wgsimWholeSamplesOneTenthCoverage.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

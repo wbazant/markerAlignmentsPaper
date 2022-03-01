@@ -233,6 +233,17 @@ All our software is publicly available under the MIT license: the Python package
 
 All results are publicly viewable and downloadable on MicrobiomeDB. In addition, the simulation results and the DIABIMMUNE comparison can be found in supplemental material. 
 
+
+## Supplemental material
+
+[Simulated whole samples - results for different methods](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/wgsimWholeSamplesOneTenthCoverage.xlsx)
+
+[Simulated reads - per-species breakdown and aggregate stats](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/simulatedReads.xlsx)
+
+#### Results, DIABIMMUNE (comparison with EukDetect)
+#### Results, HMP (comparison with Nash et al. )
+
+### 3. Comparison 
 \newpage
 \newpage
 \newpage

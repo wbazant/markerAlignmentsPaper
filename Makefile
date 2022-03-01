@@ -143,8 +143,14 @@ supplement/simulatedReads.xlsx: tmp/wgsimMutationRate.json tmp/precisionBySpecie
   	--input-json-for-stats-tab "Whole reference:tmp/wgsimMutationRate.json" \
 		--input-json-for-stats-tab "Hold-out to remaining:tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json" \
 		--stats-tab-name "Stats" \
-		--output-xlsx tmp.xlsx	&& mv tmp.xlsx supplement/simulatedReads.xlsx
+		--output-xlsx supplement/simulatedReads.xlsx
 
+supplement/diabimmune.xlsx: diabimmune-comparison
+	python3 scripts/make_diabimmune_spreadsheet.py \
+		--input-tsv-triples-our-num-markers "diabimmune-comparison/diabimmune-our-results-triples.taxon_num_markers.tsv" \
+		--input-tsv-triples-our-num-reads "diabimmune-comparison/diabimmune-our-results-triples.taxon_num_reads.tsv" \
+		--input-csv-eukdetect "diabimmune-comparison/diabimmune-results-published-with-eukdetect.csv" \
+		--output-xlsx diabimmune.tmp.xlsx && mv diabimmune.tmp.xlsx supplement/diabimmune.xlsx
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx supplement/diabimmune.xlsx
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown paper.md -o paper.pdf

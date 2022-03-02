@@ -1,21 +1,26 @@
-# Mapping metagenomic reads to a reference of markers can detect novel eukaryotes
+# Improved eukaryotic detection compatible with large-scale automated analysis of metagenomes
 
-by Wojtek, Ann, Kathryn, Dan, possibly others
+Wojtek Bazant1*, Ann Blevins2, Kathryn Crouch1#, Daniel P. Beiting2*# 
+
+1Institute of Infection, Immunity and Inflammation, College of Medical, Veterinary and Life Sciences, University of Glasgow, United Kingdom 
+
+2Department of Pathobiology, School of Veterinary Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, 19104, USA 
+
+\*To whom correspondence should be addressed. E-mail: beiting@upenn.edu and  
+\#Indicates co-senior authors  
+
+Keywords: metagenome, shotgun metagenomics, eukaryotes, bioinformatics, fungi 
 
 ## Abstract
 
 ### Background
-Eukaryotes such as fungi and protists frequently accompany bacteria and archea in microbial communities. Unfortunately, their presence is difficult to study with shotgun sequencing techniques because they are drowned out by the prokaryotic signal. Recent methods have made detection of known eukaryotes possible through the use of eukaryote-specific marker genes, yet they do not incorporate strategies to detect the presence of unknown eukaryotes.
+Eukaryotes such as fungi and protists frequently accompany bacteria and archaea in microbial communities. Unfortunately, their presence is difficult to study with shotgun sequencing techniques since prokaryotic signal dominates in most environments. Recent methods have made detection of known eukaryotes possible using eukaryote-specific marker genes, yet they do not incorporate strategies to detect the presence of unknown eukaryotes.
 
 ### Results
-We present a method of finding eukaryotes in shotgun sequencing samples based on EukDetect that we have chosen for our open science resource, MicrobiomeDB. Our main modifications are using multiple alignments for each read and relying on match identity instead of MAPQ values.
-
-We demonstrate that our method is in general capable of reporting novel eukaryotes, and that EukDetect's ability to do the same is compromised by its inclusion of MAPQ >= 30 filter on the alignments. We also show that in mapping metagenomic reads, high MAPQ values do not imply a correct match, but often rather an unambiguous one.
-
-Additionally, our method shows improved sensitivity when compared with EukDetect on the DIABIMMUNE study, and the results are in broad agreement with an analysis of stool samples from the Human MicrobiomeProject. We also back up some of our reports of novel eukaryotes with taxonomic profiles constructed from k-mers.
+Here we present CoRAle (for <u>C</u>lustering <u>of</u> <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), a method for identification of eukaryotes in shotgun metagenomic studies that uses the previously reported EukDetect marker gene reference but increases sensitivity of detection through multiple alignments and Markov clustering. Using a combination of simulated datasets and large publicly available human microbiome studies, we demonstrate that our method not only improves sensitivity, but is also capable of inferring the presence of eukaryotes not included in the marker gene reference, such as novel species and strains. We then deploy CoRAle on our MicrobiomeDB.org resource, demonstrating adequate reliability and throughput.
 
 ### Conclusion
-MAPQ values of alignments can be complex to interpret outside their original context of reference genomes, and they do not make a good filter when searching for eukaryotes in environmental samples. Nevertheless, this is plausible, and can also detect non-reference eukaryotes, like novel species and strains. With our alternative filtering strategy, read mapping becomes suitable as a broad screen for metagenomic data to identify samples where eukaryotes are present, and has enough reliability and throughput to let us proces thousands of samples for our open science resource, MicrobiomeDB.
+CoRAle allows eukaryotic detection to be automated and carried out at scale. Since our approach is independent of the reference used, it is applicable to other contexts where shotgun metagenomic reads are matched against redundant but non-exhaustive databases, like taxonomic classification of viral reads.
 
 ## Background
 

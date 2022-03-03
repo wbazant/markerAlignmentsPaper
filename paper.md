@@ -28,29 +28,7 @@ Eukaryotic microbes are a large and phylogenetically diverse group of organisms 
 
 Several methods have been developed to improve the detection of eukaryotes in complex samples. Targeted sequencing of internal transcribed spacer regions (ITS) [@Schoch2012] is a common approach but prevents simultaneous profiling of other members of the microbiome. Alternatively, collections of curated fungal genomes have been successfully used for strain-level identification of Blastocystis from stool [@beghini2017large], however, pitfalls associated with non-specific or erroneous parts of reference genomes [@r2020use] together with computational challenges associated with carrying out alignments to very large collections of reference genomes [@burrows1994block, @breitwieser2018krakenuniq], mean that alternative approaches are needed to enhance the discovery of eukaryotes from the vast amount of metagenomic data already available in the public domain. One attractive solution to this challenge was recently proposed in important work by Lind and Pollard [@lind2021accurate], who base their method for sensitive and specific identification of eukaryotes in metagenomic studies, EukDetect, on alignments to over 500,000 universal, single-copy eukaryotic marker genes. 
 
-### Motivation for our project
-
-In our open science resource, MicrobiomeDB [@oliveira2018microbiomedb], whole genome sequencing (WGS) data plays an increasingly larger role. Given the number of WGS datasets in the resource and the importance of eukaryote presence in disease, we aim to supplement the hosted data with additional information on the presence of eukaryotes in each sample. Our data comes from relatively well-studied environments such as the human body, but the sequencing depth varies from study to study and grows at a rate that precludes individual analysis of samples. For example, as of 2 Dec 2021, MicrobiomeDB contains 5113 samples with WGS data available. 
-
-With the goal of detecting eukaryotes in these large datasets, our aims for the method were to limit false positives, prevent overlooking large signals, and produce good guesses for weak signals. EukDetect [@lind2021accurate] is a recently developed tool for identifying eukaryotes in WGS data through mapping reads to marker genes that promises accuracy, sensitivity, and a low rate of false positives. We began by investigating the tool to acheive a deeper understanding of the method, then branched our own tool to accommadate new modifications.
-
-### Alignments to markers 
-
-EukDetect harnesses its authors' finding that using a specially prepared reference of sequences only typically present in eukaryotes limits false positives caused by spuriously matching reads from bacteria. The tool's reference of marker genes consists of Eukaryote-specific Benchmarking Universal Single-Copy Orthologs (BUSCOs) from OrthoDB [@kriventseva2019orthodb], `bowtie2` [@langmead2012fast] is the chosen aligner, and a proprietary multi-step process transforms alignments into taxonomic profiles.
-
-<!-- This paragraph sounds more like results or methods -->
-<!-- We retain the reference, as well as the `bowtie2` step since it has been shown to be a sensitive aligner [@thankaswamy2017evaluation], but we  review the filters chosen by EukDetect. One filter which we will investigate at length in this publication is based on the reported MAPQ scores - EukDetect only keeps alignments where MAPQ >= 30. It is not the only tool which filters on MAPQ: MetaPhlAn [@segata2012metagenomic], a frequently used program for estimating taxonomic abundance also based on read mapping, also filters on MAPQ, with the default setting of MAPQ >= 5. -->
-
-The reference of marker genes is treated by `bowtie2` as if each marker was a contig in a reference genome. Unfortunately, an alignment to a taxon's marker is not direct evidence for the taxon being present, because a read in a sequenced environmental sample need not come from one of the points in the reference to align to its sequence. Only a small proportion of eukaryotic species has been named, let alone sequenced - the 1/23/2021 version of the EukDetect reference used in this publication contains sequences for 4023 taxa, and there are estimated a 2-3 million of just fungi [@hawksworth2017fungal].
-
-We can stay open to the possibility of exploring some of this diversity if we use available markers as orientation points in the space of sequences. A read from a non-reference sequence might align when its source is near a known point - since naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural], this is not unlikely.
-
-One property of alignments which relates to distance in the sequence space is match identity, calculated as a fraction of bases that agree between the aligned read and the sequence it aligns to.
-
-MAPQ values of alignments lack a similar geometric interpretation: the SAM specification [@li2009sequence], which `bowtie2` follows, defines MAPQ as an inverse logarithm of a probability that the alignment is wrong, but this is an estimate in the context of mapping reads to a reference genome like the human genome. Aligners differ in how they calculate it [@qcfail2016mapq]: `bowtie2` estimates it using the score it gives to the alignment, score of the next best alignment, and the read's quality scores [@urban2014how]. When reporting more alignments than the best one for each read, `bowtie2` describes the MAPQ scores it reports as not meaningful.
-
-\newpage
-
+We recently sought to add EukDetect results our web-based resource, MicrobiomeDB.org [@oliveira2018microbiomedb], in order to allow eukaryote detection across a range of human metagenomic studies currently available on the site. Since the EukDetect pipeline does not allow for adjustment of filtering thresholds and it is not packaged for containerised deployments, we decided to implement our own tool, with a more flexible software architecture. We decided to retain EukDetect's reference of marker genes with the aim of producing directly comparable results, kept `bowtie2` [@langmead2012fast] since it has been shown to be a sensitive aligner [@thankaswamy2017evaluation], and evaluated different filters used by EukDetect. We noticed that a filter based on MAPQ scores, whose function is to remove uncertain hits, also removes good alignments. Studying MAPQ scores in simulated data has shown us that alignments to marker genes reflect relations of each source of reads to parts of the reference that are most similar to it. This led us to develop CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), an approach to processing marker gene alignments based on exploiting information in shared alignments to reference genes through clustering. CORALE is able to sensitively detect eukaryotes from the reference while also enabling inference of novel species not present in the reference.
 
 ## Results
 
@@ -252,6 +230,14 @@ All results are publicly viewable and downloadable on MicrobiomeDB. In addition,
 \newpage
 \newpage
 ## Not in the paper
+
+### Sequence spaces (old)
+We can stay open to the possibility of exploring some of this diversity if we use available markers as orientation points in the space of sequences. A read from a non-reference sequence might align when its source is near a known point - since naturally occuring proteins form isolated clusters of varying size and in-cluster similarity [@smith1970natural], this is not unlikely.
+
+One property of alignments which relates to distance in the sequence space is match identity, calculated as a fraction of bases that agree between the aligned read and the sequence it aligns to.
+
+MAPQ values of alignments lack a similar geometric interpretation: the SAM specification [@li2009sequence], which `bowtie2` follows, defines MAPQ as an inverse logarithm of a probability that the alignment is wrong, but this is an estimate in the context of mapping reads to a reference genome like the human genome. Aligners differ in how they calculate it [@qcfail2016mapq]: `bowtie2` estimates it using the score it gives to the alignment, score of the next best alignment, and the read's quality scores [@urban2014how]. When reporting more alignments than the best one for each read, `bowtie2` describes the MAPQ scores it reports as not meaningful.
+
 
 \newpage
 

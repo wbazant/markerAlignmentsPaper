@@ -1,6 +1,6 @@
 # Improved eukaryotic detection compatible with large-scale automated analysis of metagenomes
 
-Wojtek Bazant1*, Ann Blevins2, Kathryn Crouch1#, Daniel P. Beiting2*# 
+Wojtek Bazant1\*, Ann Blevins2, Kathryn Crouch1\#, Daniel P. Beiting2*\# 
 
 1Institute of Infection, Immunity and Inflammation, College of Medical, Veterinary and Life Sciences, University of Glasgow, United Kingdom 
 
@@ -30,32 +30,9 @@ Several methods have been developed to improve the detection of eukaryotes in co
 
 We recently sought to add EukDetect results our web-based resource, MicrobiomeDB.org [@oliveira2018microbiomedb], in order to allow eukaryote detection across a range of human metagenomic studies currently available on the site. Since the EukDetect pipeline does not allow for adjustment of filtering thresholds and it is not packaged for containerised deployments, we decided to implement our own tool, with a more flexible software architecture. We decided to retain EukDetect's reference of marker genes with the aim of producing directly comparable results, kept `bowtie2` [@langmead2012fast] since it has been shown to be a sensitive aligner [@thankaswamy2017evaluation], and evaluated different filters used by EukDetect. We noticed that a filter based on MAPQ scores, whose function is to remove uncertain hits, also removes good alignments. Studying MAPQ scores in simulated data has shown us that alignments to marker genes reflect relations of each source of reads to parts of the reference that are most similar to it. This led us to develop CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), an approach to processing marker gene alignments based on exploiting information in shared alignments to reference genes through clustering. CORALE is able to sensitively detect eukaryotes from the reference while also enabling inference of novel species not present in the reference.
 
+
+
 ## Results
-
-### Our method
-For processing MicrobiomeDB data, we run `bowtie2` set to report all alignments, and follow the following procedure to convert alignments into a taxonomic profile:
-
-*Step 1. (Filter alignments on length)*
-
-Keep all alignments that are at least 60 bases long (regardless of their MAPQ score).
-
-*Step 2. (Construct marker clusters)*
-<!-- I don't quite follow this one. The markers are reference sequences, correct? And then the distance between them is the number of multiply aligned reads? Then we can use the clustering results to say 'hey this marker is really in its group' or 'this marker isn't really with any group'? -->
-Cluster markers using the Markov Clustering (MCL) algorithm with a number of multiply aligned reads for each pair of markers. Compute mean match identity for each marker cluster as well as for each individual marker, and use the values to classify each marker as "at least average in its marker cluster" or "below average in its marker cluster".
-
-*Step 3. (Taxon clusters)*
-<!-- Ahh so this is actually filtering our reference set, yes? -->
-Reject taxa for which half or more of the markers are below average in their marker clusters. Cluster the remaining taxa using the MCL algorithm with a number of multiply aligned reads for each pair of taxa.
-
-*Step 4. (Unambiguous hits)*
-
-Report taxa which have at least two different reads aligned to at least two markers, and average alignment identity of at least 97%. Reject all other taxa in their taxon clusters.
-
-*Step 5. (Strong ambiguous hits)*
-
-For each remaining taxon cluster that has least four markers and eight reads, join names of taxa in the cluster, prepend "?", and report as one result.
-<!-- It is possible a reviewer will ask you how you arrived at the numbers "four" and "eight". Not something to worry about for now but just noting you may have to produce some sort of graph that shows why those nujmbers are optimal. -->
-
 ### Simulated samples with unknown species
 
 We first show how EukDetect would handle reads from unknown taxa by running it on known sequences witholded from the reference. We divide the reference set into a smaller reference and a hold-out set that we use to verify unknown organism detection. We then sample from the hold-out set to prepare 338 simulated samples, each with one "unknown" species at 0.1 coverage. 
@@ -64,8 +41,8 @@ These inputs give alignments in all but 58 (17%) cases, but EukDetect reports no
 
 Modifying EukDetect to filter on MAPQ >= 5 is not an adequate adjustment. While it improves the tool's ability to recognise eukaryotic signal in the sample, it compromises the tool's ability to recognise that this signal consists of only a single species. Our method maintains the second metric while improving the first one - the values for EukDetect, modified EukDetect, and our method are respectively 35%, 47%, 61% for fractions of samples where signal is detected and 81%, 60%, 80% for fractions of detected signal reported as one species.
 
-
-![**Simulated unknown taxa**](figures/dropoutForFilters.png)
+![**Simulated unknown taxa**](figures/wholeSamplesBarsFraction.png)
+![**Old - Simulated unknown taxa**](figures/dropoutForFilters.png)
 
 \newpage
 
@@ -98,6 +75,10 @@ In total, we see that the success of read mapping, and the efficacy of subsequen
 
 \newpage
 
+### CORALE leverages Markov clustering for reference-based eukaryote detection
+We wrote our software, CORALE - for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts - as a Nextflow workflow wrapping a Python module. It provisions sequence files, aligns them to the refernce of markers, and produces a taxonomic profile through a seven-step procedure (Figure 3). First, we run `bowtie2` and keep all alignments that are at least 60 nucleotides in length (Figure 3, step 1), to ensure that the matches contain enough information to be marker-specific, and then use Markov Clustering (MCL) with counts of shared alignments between marker genes to produce marker clusters (Figure 3, step 2). We then compute average % match identity for each marker gene, as well as an average match identity for all alignments within each marker cluster (Figure 3, step 3), for the purpose of rejecting any taxon with ≤ 50% of marker genes having % identity that is lower than the average % identity for the cluster (Figure 3, step 4). We then group remaining taxa into taxon clusters using MCL with counts of multiply aligned reads (Figure 3, step 5), which allows us to reflect ambiguity of identification in reporting the hits. We report unambiguous matches (defined as having average alignment identity of at least 97%, two different reads aligned to at least two markers) as is (Figure 3, step 6), remove other taxa in clusters where there were any unambiguous and then consider the remaining taxon clusters to each be one potential hit, reporting it if it's a strong ambiguous match ( defined as having at least four markers and eight reads) by joining names of taxa in the cluster and prepending with a "?" (Figure 3, step 7).
+
+![** CORALE - schematic  **](figures/coraleSchematic.png)
 
 ### Comparing species detected by our method to known results
 The shortcomings of filtering on MAPQ demonstrated above do not in themselves make a case for our method as an alternative, so we next turn to a comparison of results produced by our method on datasets where we can have expectations about which eukaryotes should exist.

@@ -17,10 +17,10 @@ Keywords: metagenome, shotgun metagenomics, eukaryotes, bioinformatics, fungi
 Eukaryotes such as fungi and protists frequently accompany bacteria and archaea in microbial communities. Unfortunately, their presence is difficult to study with shotgun sequencing techniques since prokaryotic signal dominates in most environments. Recent methods have made detection of known eukaryotes possible using eukaryote-specific marker genes, yet they do not incorporate strategies to detect the presence of unknown eukaryotes.
 
 ### Results
-Here we present CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), a method for identification of eukaryotes in shotgun metagenomic studies that uses the previously reported EukDetect marker gene reference but increases sensitivity of detection through multiple alignments and Markov clustering. Using a combination of simulated datasets and large publicly available human microbiome studies, we demonstrate that our method not only improves sensitivity, but is also capable of inferring the presence of eukaryotes not included in the marker gene reference, such as novel species and strains. We then deploy CoRAle on our MicrobiomeDB.org resource, demonstrating adequate reliability and throughput.
+Here we present CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), a method for identification of eukaryotes in shotgun metagenomic studies that uses the previously reported EukDetect marker gene reference but increases sensitivity of detection through multiple alignments and Markov clustering. Using a combination of simulated datasets and large publicly available human microbiome studies, we demonstrate that our method not only improves sensitivity, but is also capable of inferring the presence of eukaryotes not included in the marker gene reference, such as novel species and strains. We then deploy CORALE on our MicrobiomeDB.org resource, demonstrating adequate reliability and throughput.
 
 ### Conclusion
-CoRAle allows eukaryotic detection to be automated and carried out at scale. Since our approach is independent of the reference used, it is applicable to other contexts where shotgun metagenomic reads are matched against redundant but non-exhaustive databases, like taxonomic classification of viral reads.
+CORALE allows eukaryotic detection to be automated and carried out at scale. Since our approach is independent of the reference used, it is applicable to other contexts where shotgun metagenomic reads are matched against redundant but non-exhaustive databases, like taxonomic classification of viral reads.
 
 ## Background
 
@@ -99,70 +99,33 @@ Additionally, the efficacy of using many alignments per read in combination with
 \newpage
 
 ## Conclusion
-
-We have shown that the MAPQ ≥ 30 filter used by EukDetect decreases the tool's sensitivity at detecting unknown species, and demonstrated why: MAPQ values are typically high for unambiguous matches, and low when the source species differs from anything in the reference or if the reference is redundant. Changing MAPQ ≥ 30 to a more permissive value like MAPQ ≥ 5 offers slightly different trade-offs - higher precision and recall for unknown species, but also an increased number of off-target hits, and it is not unambiguously an improvement.
-
-We have proposed an alternative strategy to filter results, based on match identity and incorporating multiple alignments, and developed tooling around this strategy - a Python package `marker_alignments` to produce taxonomic profiles using an input of alignments to markers, and a Nextflow workflow `wbazant/marker-alignments-nextflow` that bundles it with `bowtie2` and EukDetect's reference
-
-We have also provided a comparison of data processed by our method with several other sources, demonstrating a robust incremental improvement - we achieve higher sensitivity overall, we are able to report of taxa not available in the reference, and enough reliability and throughput to let us proces thousands of samples for MicrobiomeDB.
+CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts) is a tool for identification of eukaryotes in shotgun metagenomic studies. While CORALE is based on the same marker gene reference as EukDetect, it does not use EukDetect's approach to filtering, most notably not including the MAPQ ≥ 30 filter which we show to have species-specific impact on results. Its approach, based on multiple alignments and Markov clustering, results in sensitive and accurate detection, and is capable of inferring presence of eukaryotes not included in the reference. We show this to be the case using simulated samples with 'novel' species, as well as data from DIABIMMUNE, a large infant gut metagenome study. CORALE is also successfully deployed on our MicrobiomeDB.org resource, demonstrating the appropriateness of our method for large-scale screens of metagenomic data for the purpose of detecting eukaryotes.
 
 ## Methods
 
-### Software
-We use `wgsim` [@li2011wgsim] to simulate reads from EukDetect's reference of BUSCOs from OrthoDB [@kriventseva2019orthodb], and use `bowtie2` [@langmead2012fast] to align them back to the reference. When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified. We run `bowtie2` in end to end (default) mode.
+### Simulated reads
+To conduct simulations, we use `wgsim` [@li2011wgsim] to simulate reads from the 1/23/2021 version of EukDetect's reference, latest at time of writing, consisting of BUSCOs from OrthoDB [@kriventseva2019orthodb]. We use `bowtie2` [@langmead2012fast] to align reads to references, in end to end (default) mode. When using `wgsim` we set read length to 100, base error rate to 0, and other parameters set to their default values unless otherwise specified.
 
-We organize simulations and make figures for this publication using a custom Makefile and Python code, which we have made publicly available.
+We process results using custom Python code. We judge correctness of simulated alignments using the level of the lowest common taxon containing source and match, as provided by the ETE toolkit [@huerta2016ete ] using the NCBI database version dated 2020/1/14 packaged with EukDetect. We deem the alignment correct if the source and match are of the same species, and in case of hold-out analysis when this is not possible by construction, same genus.
 
-We process `bowtie2` outputs and apply filters with our software tool, `marker_alignments`, for producing taxonomic profiles from alignments of marker genes. We have developed the tool side by side with this publication to explore aforementioned ideas about query identity and multiple alignments per query, and realize a design goal of producing good guesses from a small amount of alignments to a potentially incomplete reference. The tool is implemented in Python. It uses the `pysam` module to read alignment files, a `sqlite3` database to store alignments and build reports, and the MCL algorithm to convert pairwise similarities of markers and taxa into cluster assignments [@van2012using].
-
-To process entire datasets we use our Nextflow workflow, `wbazant/marker-alignments-nextflow`, which bundles file download, a run of `bowtie2` set up to produce multiple alignments per read, and processing the alignments.
-
-### Calculations
-We judge correctness of simulated alignments using the level of the lowest common taxon containing source and match, as provided by the ETE toolkit [@huerta2016ete ] using the NCBI database version dated 2020/1/14 packaged with EukDetect. We deem the alignment correct if the source and match are of the same species, and in case of hold-out analysis when this is not possible by construction, same genus.
-
-Our calculations of precision and recall are in line with definitions in the OPAL framework [@meyer2019assessing], as proportion of correctly mapping reads among reads that map to any reference (for precision) and proportion of sampled reads that correctly map (for recall).
-
-### Different reference versions
-*EukDetect's reference*: we use the 1/23/2021 version of the reference provided by EukDetect, latest at time of writing.
-
-*Hold-out and remaning set*: we approximate the possibility an unknown species being present in the sequenced material through a hold-out analysis. We remove sequences for 371 species from the reference (one tenth of the species) to form a hold-out set, and build a `bowtie2` index with the remaining nine-tenth of the species for searching the remaining set.
-
-
-*Duplicated reference*: Similarity of reference sequences makes mapping reads more difficult, and the need for strain-level differentiation in fields like genomic epidemiology has inspired the creation of specialized aligners like KMA [@clausen2018rapid]. To understand how `bowtie2` is affected by duplication of sequences, we prepare an index of 371 species from the reference where each sequence is included once as originally, and once after extending it by a single "A" base.
+Our calculations of precision and recall are as defined in by OPAL framework [@meyer2019assessing]: precision is proportion of correctly mapping reads among reads that map to any reference, and recall is proportion of sampled reads that correctly map.
 
 ### Simulated whole samples
 To simulate whole samples, we skip 33 inputs where `wgsim` considers too fragmented to source reads from at a set coverage, yielding 338 samples. We select the number of reads to source per marker so as to achieve uniform 0.1 coverage, as calculated in [@sims2014sequencing].
 
-To run EukDetect, we edit the default config file such that it lists the simulated samples. For the MAPQ ≥ 5 modification, we additionally modify source code of our local installation.
-
-To obtain equivalent results with no or some filters applied, we run `bowtie2` in end to end mode, and apply combinations of filters with our `marker_alignments` package.
-
-### Simulated reads
-Here is a list of different experiments where we simulate and track alignments of individual reads in the order of mention in the results section:
-1. Simulate a read from reference, align back to the reference
-2. Simulate a read from reference, align back to duplicated reference
-3. Simulate a mutated read from reference (for various mutation rate parameters), align back to the reference
-4. Simulate a read from hold-out set, align to the remaining set
-
-We perform each of the experiments approximately one million times and aggregate summary statistics. Full results are available in the supplemental material.
+To run EukDetect, we edit the default config file such that it lists the simulated samples. For the MAPQ ≥ 5 modification ("EukDetect+"), we modify source code of our local installation. For the "four reads mapping with at MAPQ ≥ 30 to at least two markers" modification, ("EukDetect-"), we run CORALE in non-default configuration use these three filters.
 
 ## Data availability
 
-All our software is publicly available under the MIT license: the Python package, (*github.com/wbazant/marker_alignments*), the Nextflow workflow (*github.com/wbazant/marker-alignments-nextflow*), and a mix of Python, Make, and Bash scripts to produce simulations, comparisons, and figures for this publication (*github.com/wbazant/markerAlignmentsPaper*). 
+All our software is publicly available under the MIT license: CORALE (*github.com/wbazant/CORALE*), its main Python module, (*github.com/wbazant/marker_alignments*), and a mix of Python, Make, and Bash scripts to produce simulations, comparisons, and figures for this publication (*github.com/wbazant/markerAlignmentsPaper*). 
 
-All results are publicly viewable and downloadable on MicrobiomeDB. In addition, the simulation results and the DIABIMMUNE comparison can be found in supplemental material. 
-
-
-## Supplemental material
+All results are publicly viewable and downloadable on MicrobiomeDB. In addition, the following files are available as supplemental material: 
 
 [Simulated whole samples - results for different methods](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/wgsimWholeSamplesOneTenthCoverage.xlsx)
-
 [Simulated reads - per-species breakdown and aggregate stats](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/simulatedReads.xlsx)
+[DIABIMMUNE - CORALE vs EukDetect comparison](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/diabimmuneComparison.zip)
 
-#### Results, DIABIMMUNE (comparison with EukDetect)
-#### Results, HMP (comparison with Nash et al. )
 
-### 3. Comparison 
 \newpage
 \newpage
 \newpage

@@ -83,36 +83,18 @@ In addition to making our software freely available, we integrate CORALE into th
 
 ## Discussion
 
-In this work we offer a method that improves upon recent methods for eukaryotic detection by improving identification of unknown taxa. We demonstrated that the commonly used MAPQ <= 30 filter prevents detection of unknown taxa, and furthermore that by using match identiy instead we are sensitive to taxa that exist in the sample but not our dataset. Finally we used publicly available datasets to compare our method to EukDetect, and with our method we identify many novel species that remain unreported by EukDetect.
+### Use cases and limitations of CORALE
 
-### Rationale behind our method
-For MicrobiomeDB, we aim to produce taxonomic profiles for a range of environmental data that may include novel species or strains. Based on our findings, this goal requires us to move away from the MAPQ ≥ 30 filter currently applied in published methods such as EukDetect. Our simulations establish that alignments to markers are only approximately correct - around 95% in general - with most misses being near misses, and novel species appearing as hits in groups of related taxa.
+CORALE is a tool for taxonomic profiling based on the same reference and with the same aim as EukDetect [@lind2021accurate]: to report on eukaryotes in metagenomes without overwhelming the results by false positives. Thanks to the novel approach involving the use of many alignments per read and Markov clustering, we achieve better sensitivity and alleviate reference bias associated with filtering on MAPQ scores. Adequate specificity combined with the tool's reliability lets us integrate eukaryotic detection into our open-science platform, MicrobiomeDB.org, and provides the microbiome research community with a means of setting up broad screens of metagenomic data to identify samples where eukaryotes are present. 
 
-We set `bowtie2` to report all alignments per query to be able to group reads by source - reads which map to multiple markers inform us that hits to those markers are in general related. Since presence of secondary alignments distinguishes a single unknown organism from a plurality of organisms, we can treat secondary alignments as a source of negative information - this is the basis for rejecting taxa with a few primary or unique alignments and a majority of secondary alignments.
-
-We choose MCL to group reads which are likely to come from the same source for practical reasons, since it is a well-established method of producing clusters from measures of similarity. 
-
-### Limitations
-Our method requires a reference of markers whose sequences are quite specific to their taxa, but the fewer sequences the reference has per taxon, the higher sequencing depth required to produce enough reads. Using a larger set of markers could improve the sensitivity of our method.
-
-We chose various threshold parameters - 60 bp as minimum read length, two as the number of markers to report a taxon, 97% as match identity of unambiguous species - either by replicating EukDetect's thresholds or on an empirical basis. While these details are easy to change - in our software, readers interested in applying our method can adjust the thresholds and combine them with a few other filters we implemented - our filtering process has no unified theoretical basis. A different set of filters that involve statistical modelling could result in a method with more natural parameters, and add a quantified measure of uncertainty associated with each prediction.
-
-### Our interpretation of MAPQ values
-In our results, MAPQ values are generally high when the source of a read is close to a sequence in the reference and the read comes from a reasonably unique region. MAPQ values are low for reads whose nearest neighbour is either ambiguous or distant. This shows that the field's original definition for alignments to reference genomes ( a negative logarithm of a probability that the alignment is wrong [@li2009sequence] ) retains its intuitive meaning as a measure of certainty of location when used in metagenomics.
-
-Reads can map correctly as well as with low MAPQ in particularly congested areas of sequence space because a read coming from a segment shared between sequences does not contain enough information to assign it to the source. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses. Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, reads either do not map or they correctly map with low MAPQ.
+Unfortunately, the approach of using shotgun metagenomics followed by processing with CORALE is not without limitations, chiefly due to high cost of WGS sequencing to the depth required to detect most eukaryotes. CORALE handles these limitations gracefully, making use of minimal information required to plausibly report unambiguous hits. Future improvements in genome assembly could be of help here through yielding better information on eukaryote-specific genomic sequences which could be used to create a larger reference with more taxa and more sequences per taxon, but CORALE does not require a complete reference - it is able to infer presence of taxa which are absent from the reference.
 
 ### Future work
-Our method can be applied by others to set up broad screens of metagenomic data to identify samples where eukaryotes are present.
 
-The idea to use multiple alignments per query as a basis for similarity clustering could be applicable in conjunction with tools for reference-guided assembly. We have explored this briefly with KMA, setting it to report all assembled fragments, running an all-to-all nucleotide BLAST at 97% identity on the fragments, converting matches into similarity measures by computing ratios of query length to template length for each match, and running MCL. The results seemed interesting for samples dominated by a novel unknown taxon, similarly to the tool's intended use in genomic epidemiology. KMA's assembly capabilities were of little use to us in detecting eukaryotes at low coverage, and additional resource costs were formidable, so we have not further investigated its use.
+Our approach could potentially be applied to processing alignments to any reference that is anticipated to be redundant and incomplete, and where reads are expected to map with varying identity. This includes identification of bacteria to the strain-level resolution required in genomic epidemiology, as well as taxonomic classification of viral reads.
 
-It could be investigated whether aspects of our method could be applied to general-purpose profilers based on read mapping, like MetaPhlAn. MetaPhlAn is a well-optimised method that does very well in benchmarks like OPAL [@meyer2019assessing] or CAMI [@fritz2019camisim], and finding alternative to its MAPQ ≥ 5 filter could allow further incremental gains, perhaps including more sequences in its reference and thus allowing for resolution at strain level.
+Additionally, the efficacy of using many alignments per read in combination with clustering demonstrated by CORALE shows that to develop new metagenomics tools, it can be worthwhile to view protein sequences as a similarity-based network: naturally occuring proteins form isolated clusters of similar sequence [@smith1970natural]. With additional theoretical work, this view could become a basis for predictions about presence of eukaryotes, potentially providing probabilistic estimates of certainty on reported results.
 
-<!-- Also quantifying how much is there? I think we had talked about that in an mbio meeting a long time ago? -->
-<!-- A section on limitations would also be helfpul, if there are any important ones to talk about! -->
-
-<!-- In the eukdetect paper's discussion, they have this line "One important limitation of our approach is that only eukaryotic species with sequenced genomes or that have close relatives with a sequenced genome can be detected by the EukDetect pipeline." It goes on to say that their plan to deal with currently unknown eukaryotes is to wait for sequencing data to become available and scale their reference database. Could be good to touch on this at some point since we'll never actually get 100% of organisms in the database, so we need to be able to gracefully handle unknowns. -->
 
 \newpage
 
@@ -186,6 +168,25 @@ All results are publicly viewable and downloadable on MicrobiomeDB. In addition,
 \newpage
 \newpage
 ## Not in the paper
+
+### Rationale behind our method
+For MicrobiomeDB, we aim to produce taxonomic profiles for a range of environmental data that may include novel species or strains. Based on our findings, this goal requires us to move away from the MAPQ ≥ 30 filter currently applied in published methods such as EukDetect. Our simulations establish that alignments to markers are only approximately correct - around 95% in general - with most misses being near misses, and novel species appearing as hits in groups of related taxa.
+
+We set `bowtie2` to report all alignments per query to be able to group reads by source - reads which map to multiple markers inform us that hits to those markers are in general related. Since presence of secondary alignments distinguishes a single unknown organism from a plurality of organisms, we can treat secondary alignments as a source of negative information - this is the basis for rejecting taxa with a few primary or unique alignments and a majority of secondary alignments.
+
+We choose MCL to group reads which are likely to come from the same source for practical reasons, since it is a well-established method of producing clusters from measures of similarity. 
+
+### Limitations
+
+### Our interpretation of MAPQ values
+In our results, MAPQ values are generally high when the source of a read is close to a sequence in the reference and the read comes from a reasonably unique region. MAPQ values are low for reads whose nearest neighbour is either ambiguous or distant. This shows that the field's original definition for alignments to reference genomes ( a negative logarithm of a probability that the alignment is wrong [@li2009sequence] ) retains its intuitive meaning as a measure of certainty of location when used in metagenomics.
+
+Reads can map correctly as well as with low MAPQ in particularly congested areas of sequence space because a read coming from a segment shared between sequences does not contain enough information to assign it to the source. Our data suggests this might be the right model for a large fraction of errors, because most misses are near misses. Meanwhile, when the source of reads is quite distant from its nearest reference which is nevertheless the best match for each read, reads either do not map or they correctly map with low MAPQ.
+
+### Future work
+The idea to use multiple alignments per query as a basis for similarity clustering could be applicable in conjunction with tools for reference-guided assembly. We have explored this briefly with KMA, setting it to report all assembled fragments, running an all-to-all nucleotide BLAST at 97% identity on the fragments, converting matches into similarity measures by computing ratios of query length to template length for each match, and running MCL. The results seemed interesting for samples dominated by a novel unknown taxon, similarly to the tool's intended use in genomic epidemiology. KMA's assembly capabilities were of little use to us in detecting eukaryotes at low coverage, and additional resource costs were formidable, so we have not further investigated its use.
+
+It could be investigated whether aspects of our method could be applied to general-purpose profilers based on read mapping, like MetaPhlAn. MetaPhlAn is a well-optimised method that does very well in benchmarks like OPAL [@meyer2019assessing] or CAMI [@fritz2019camisim], and finding alternative to its MAPQ ≥ 5 filter could allow further incremental gains, perhaps including more sequences in its reference and thus allowing for resolution at strain level.
 
 ### Nash et al.
 We also compare our pipeline with [@nash2017gut], who search for fungal reads in WGS data in Human Microbiome Project [@turnbaugh2007human] through alignments to a reference of 1315 whole fungal genomes depleted of regions that might be bacterial, which are then refined through removing hits which also match reads in non-redundant bacterial databases. Their method assigns reads to 268 different species in 380 out of 472 tested samples, which aggregated by read and sample gives 1487 data points. 

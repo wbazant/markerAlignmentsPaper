@@ -73,10 +73,13 @@ To test our method on data where there are expectations about which eukaryotes m
 
 Importantly, CORALE differs from EukDetect in how it treats reads that might originate from a novel species. For example, in sample G78909 from DIABIMMUNE, EukDetect reports *Penicillium nordicum*, while our method reports a novel *Penicillium*. In sample G80329, our method agrees with EukDetect regarding detection of *Candida parapsilosis*, and also identifies an additional *C. albicans*. Finally, in sample G78500 EukDetect reports *Saccharomyces cerevisiae* and *Kazachstania unispora*, which our method reports to be reads from one taxon slightly different from the reference *Saccharomyces cerevisiae*.
 
+### Automating eukaryote detection with CORALE 
 
-<!-- say that from here on out all mbioDB data will be processed like this. -->
-Starting with Release 25 (2 Dec 2021), all whole genome sequencing data available on our site, MicrobiomeDB - 5113 samples in Release 25 - is additionally profiled for presence of eukaryotes. 
+In addition to making our software freely available, we integrate CORALE into the automated data loading workflow for our open-science platform, MicrobiomeDB.org. Starting with Release 25 (2 Dec 2021), all whole genome sequencing data on the site is profiled for presence of eukaryotes using our approach (Figure 3). As of Release 25, the site contains 5113 samples from 6 published metagenomic studies [@Hayden2020, @vatanen2016variation, @Kostic2015, @Olm2019, @Gibson2016, @Gasparrini2019], and CORALE identifies 97 distinct fungal species across 1661/5113 (32%) metagenomic samples. A summary of the top 10 most frequently observed fungi (Figure 4A) reveals that *Malassezia restricta*, a common commensal and opportunistic pathogen, and *Candida albicans*, a prevalent component of gut flora, are most commonly detected, with presence in 363 and 229 samples, respectively. Since these results are integrated with all other sample annotations on MicrobiomeDB, users can easily identify associations between eukaryotes and metadata (Figure 4B and 4C). For example, *Malassezia globosa* (identified in 130 samples) is primarily found on skin and nostrils, while *C. albicans* (Figure 4B and 4C), *C. parapsilosis*, *Clavispora lusitaniae*, and *S. cerevisiae* are all primarily or exclusively found in stool. 
 
+![**MicrobiomeDB - top fungal species**](figures/microbiomeDBResults.png)
+
+\newline
 
 ## Discussion
 

@@ -22,6 +22,8 @@ Here we present CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>
 ### Conclusion
 CORALE allows eukaryotic detection to be automated and carried out at scale. Since our approach is independent of the reference used, it is applicable to other contexts where shotgun metagenomic reads are matched against redundant but non-exhaustive databases, like taxonomic classification of viral reads.
 
+\newpage
+
 ## Background
 
 Eukaryotic microbes are a large and phylogenetically diverse group of organisms that includes both pathogens and commensals, the latter of which are emerging as important modulators of health and disease.  Protists include many important pathogens of humans and other animals, such as Cryptosporidium, Toxoplasma, Eimeria, Trypanosoma, and Plasmodium.  Many fungi are also well-studied pathogens affecting a diverse range of hosts.  For example, *Aspergillus fumigatus* is an important cause of respiratory disease in humans [@Latge1999]; *Magnaporthe oryzae* is the most important fungal disease of rice globally [@Wilson2009]; while *Pseudogymnoascus destructans* is the cause of White-Nose Syndrome, one of the most devastating diseases of bats [@Wibbelt2010].  However, recent data also suggests that non-pathogenic commensal fungi are significant as modulators of the human antibody repertoire [@Doron2021,@doron2021mycobiota,@Ost2021]; intestinal barrier integrity, and colonization resistance [@Leonardi2022, @Jiang2017].  This diverse array of host-microbe interactions and host phenotypes influenced by eukaryotic microbes underscores the importance of studying this class of organisms in their natural habitat.  Unfortunately, the ability to carry out culture-independent analysis of eukaryotic microbes is severely hindered by their low abundance relative to bacteria, which makes accurate detection a challenge and means that these organisms are commonly overlooked in metagenomic studies [@laforest2018microbial].  For example, an analysis of stool metagenomes in healthy adults participating in the Human Microbiome Project [@human2012structure] showed only 0.01% reads aligning to fungal genomes[@nash2017gut]. 
@@ -30,13 +32,12 @@ Several methods have been developed to improve the detection of eukaryotes in co
 
 We recently sought to add EukDetect results our web-based resource, MicrobiomeDB.org [@oliveira2018microbiomedb], in order to allow eukaryote detection across a range of human metagenomic studies currently available on the site. Since the EukDetect pipeline does not allow for adjustment of filtering thresholds and it is not packaged for containerised deployments, we decided to implement our own tool, with a more flexible software architecture. We decided to retain EukDetect's reference of marker genes with the aim of producing directly comparable results, kept `bowtie2` [@langmead2012fast] since it has been shown to be a sensitive aligner [@thankaswamy2017evaluation], and evaluated different filters used by EukDetect. We noticed that a filter based on MAPQ scores, whose function is to remove uncertain hits, also removes good alignments. Studying MAPQ scores in simulated data has shown us that alignments to marker genes reflect relations of each source of reads to parts of the reference that are most similar to it. This led us to develop CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), an approach to processing marker gene alignments based on exploiting information in shared alignments to reference genes through clustering. CORALE is able to sensitively detect eukaryotes from the reference while also enabling inference of novel species not present in the reference.
 
-
-
-## Results
 \newpage
 
+## Results
 
 ### Species-specific impact of MAPQ filtering 
+
 We base our study of MAPQ scores in simulated data on the `wgsim` [@li2011wgsim] software for sampling reads, `bowtie2` used like in EukDetect for aligning simulated reads, and a custom Python program for recording properties of alignments like MAPQ together with degree of mismatch between source taxon of each read and the taxon of the sequence it aligns to. To quantify outcomes, we calculate the proportion of sampled reads that correctly map (recall), as well as the correctly mapped reads as a proportion of total reads that map to any reference (precision) [@meyer2019assessing].  
 
 Not surprisingly, when reads in a metagenomic sample exactly match the reference (as simulated by sampling from the reference itself) they are accurately mapped to the correct taxon with a precision and recall of 95.1%.  Applying a MAPQ ≥ 30 filter increases precision to 99.7% and decreases recall to 91.7%.  This translates to 8% of reads mapping with MAPQ < 30 with just under half of those being incorrectly mapped.  In contrast, with MAPQ ≥ 30 only 0.3% are incorrectly mapped.  
@@ -53,6 +54,7 @@ We are also able to approximate a possiblity of 'novel' and non-reference specie
 
 
 ### CORALE leverages Markov clustering for reference-based eukaryote detection
+
 We wrote our software, CORALE - for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts - as a Nextflow workflow wrapping a Python module. It provisions sequence files, aligns them to the refernce of markers, and produces a taxonomic profile through a seven-step procedure (Figure 3). First, we run `bowtie2` and keep all alignments that are at least 60 nucleotides in length (Figure 3, step 1), to ensure that the matches contain enough information to be marker-specific, and then use Markov Clustering (MCL) with counts of shared alignments between marker genes to produce marker clusters (Figure 3, step 2). We then compute average % match identity for each marker gene, as well as an average match identity for all alignments within each marker cluster (Figure 3, step 3), for the purpose of rejecting any taxon with ≤ 50% of marker genes having % identity that is lower than the average % identity for the cluster (Figure 3, step 4). We then group remaining taxa into taxon clusters using MCL with counts of multiply aligned reads (Figure 3, step 5), which allows us to reflect ambiguity of identification in reporting the hits. We report unambiguous matches (defined as having average alignment identity of at least 97%, two different reads aligned to at least two markers) as is (Figure 3, step 6), remove other taxa in clusters where there were any unambiguous and then consider the remaining taxon clusters to each be one potential hit, reporting it if it's a strong ambiguous match ( defined as having at least four markers and eight reads) by joining names of taxa in the cluster and prepending with a "?" (Figure 3, step 7).
 
 ![** CORALE - schematic  **](figures/coraleSchematic.png)
@@ -122,8 +124,11 @@ All our software is publicly available under the MIT license: CORALE (*github.co
 All results are publicly viewable and downloadable on MicrobiomeDB. In addition, the following files are available as supplemental material: 
 
 [Simulated whole samples - results for different methods](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/wgsimWholeSamplesOneTenthCoverage.xlsx)
+
 [Simulated reads - per-species breakdown and aggregate stats](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/simulatedReads.xlsx)
+
 [DIABIMMUNE - CORALE vs EukDetect comparison](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/diabimmuneComparison.zip)
 
 \newpage
+
 #Bibliography

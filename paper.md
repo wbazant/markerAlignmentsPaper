@@ -1,13 +1,16 @@
-# Improved eukaryotic detection compatible with large-scale automated analysis of metagenomes
+---
+title: Improved eukaryotic detection compatible with large-scale automated analysis of metagenomes
+geometry: margin=2cm
+---
+Wojtek Bazant$^1$\*, Ann Blevins$^2$, Kathryn Crouch$^1$\#, Daniel P. Beiting$^2$\*\#
 
-Wojtek Bazant1\*, Ann Blevins2, Kathryn Crouch1\#, Daniel P. Beiting2*\# 
+1. Institute of Infection, Immunity and Inflammation, College of Medical, Veterinary and Life Sciences, University of Glasgow, United Kingdom 
 
-1Institute of Infection, Immunity and Inflammation, College of Medical, Veterinary and Life Sciences, University of Glasgow, United Kingdom 
+2. Department of Pathobiology, School of Veterinary Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, 19104, USA 
 
-2Department of Pathobiology, School of Veterinary Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, 19104, USA 
+\* To whom correspondence should be addressed. E-mail: beiting@upenn.edu
 
-\*To whom correspondence should be addressed. E-mail: beiting@upenn.edu and 
-\#Indicates co-senior authors 
+\# Indicates co-senior authors 
 
 Keywords: metagenome, shotgun metagenomics, eukaryotes, bioinformatics, fungi 
 
@@ -17,7 +20,7 @@ Keywords: metagenome, shotgun metagenomics, eukaryotes, bioinformatics, fungi
 Eukaryotes such as fungi and protists frequently accompany bacteria and archaea in microbial communities. Unfortunately, their presence is difficult to study with shotgun sequencing techniques, since prokaryotic signals dominate in most environments. Recent methods for eukaryotic detection use eukaryote-specific marker genes, but they do not yet incorporate strategies to handle presence of unknown eukaryotes.
 
 ### Results
-Here we present CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), a tool for identification of eukaryotes in shotgun metagenomic data based on alignments to eukaryote-specific marker genes, that allows for sensitivity of detection through multiple alignments and Markov clustering. Using a combination of simulated datasets and large publicly available human microbiome studies, we demonstrate that our method is not only sensitive and accurate, but is also capable of inferring the presence of eukaryotes not included in the marker gene reference, such as novel species and strains. We then deploy CORALE on our MicrobiomeDB.org resource, demonstrating adequate reliability and throughput.
+Here we present CORALE (for \underline{C}lustering \underline{o}f \underline{R}eference \underline{Al}ignm\underline{e}nts), a tool for identification of eukaryotes in shotgun metagenomic data based on alignments to eukaryote-specific marker genes, that allows for sensitivity of detection through multiple alignments and Markov clustering. Using a combination of simulated datasets and large publicly available human microbiome studies, we demonstrate that our method is not only sensitive and accurate, but is also capable of inferring the presence of eukaryotes not included in the marker gene reference, such as novel species and strains. We then deploy CORALE on our MicrobiomeDB.org resource, demonstrating adequate reliability and throughput.
 
 ### Conclusion
 CORALE allows eukaryotic detection to be automated and carried out at scale. Since our approach is independent of the reference used, it is applicable to other contexts where shotgun metagenomic reads are matched against redundant but non-exhaustive databases, like identification of novel bacterial strains or taxonomic classification of viral reads.
@@ -32,7 +35,7 @@ Several methods have been developed to improve the detection of eukaryotes in co
 
 We recently sought to add EukDetect results our web-based resource, MicrobiomeDB.org [@oliveira2018microbiomedb], in order to allow eukaryote detection across a range of human metagenomic studies currently available on the site. Since the EukDetect pipeline does not allow for adjustment of filtering thresholds and it is not packaged for containerised deployments, we decided to implement our own tool, with a more flexible software architecture. We retained EukDetect's reference of marker genes with the aim of producing directly comparable results, kept `bowtie2` [@langmead2012fast] since it has been shown to be a sensitive aligner [@thankaswamy2017evaluation], and, to better understand the filtering process used by EukDetect, conducted a simulation-based evaluation. We noticed that a filter based on MAPQ scores, though necessary for EukDetect's high specificity, removes correct alignments for which `bowtie2` has inferior but closely scored alternatives.
 
-Considering how the difficulty of detecting a taxon may be affected by similarity of its sequence to nearest references led us to develop CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts), an approach to processing marker gene alignments based on exploiting information in shared alignments to reference genes through clustering. This allows for sensitive and accurate detection while also enabling inference of novel species not present in the reference.
+Considering how the difficulty of detecting a taxon may be affected by similarity of its sequence to nearest references led us to develop CORALE (for \underline{C}lustering \underline{o}f \underline{R}eference \underline{Al}ignm\underline{e}nts), an approach to processing marker gene alignments based on exploiting information in shared alignments to reference genes through clustering. This allows for sensitive and accurate detection while also enabling inference of novel species not present in the reference.
 
 \newpage
 
@@ -56,7 +59,7 @@ Since the diversity of eukaryotic taxa extends far beyond the currently discover
 
 
 ### CORALE leverages Markov clustering for reference-based eukaryote detection
-We wrote our software, CORALE - for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts - as a Nextflow workflow wrapping a Python module. It provisions sequence files, aligns them to the reference of markers, and produces a taxonomic profile through a seven-step procedure (Figure 2). First, we run `bowtie2` and keep all alignments that are at least 60 nucleotides in length (Figure 2, step 1), which ensures that the matches contain enough information to be marker-specific. We then run Markov Clustering (MCL) on a graph of marker genes as nodes and counts of shared alignments as edge weights (Figure 2, step 2) to obtain marker clusters. We then calculate % match identities of alignments (Figure 2, step 3) and aggregate them by marker to obtain an identity average for each marker gene, as well as per cluster to obtain a cluster average. Each marker whose identity average is lower than the cluster average is an inferior representation for signal in the sample, so we next reject each taxon with ≥ 50% of such markers (Figure 2, step 4). We then group remaining taxa into taxon clusters using MCL with counts of multiply aligned reads (Figure 2, step 5), which allows us to reflect ambiguity of identification in reporting the hits. We then report unambiguous matches (defined as having average alignment identity of at least 97%, two different reads aligned to at least two markers) as is (Figure 2, step 6), while rejecting other taxa in taxon clusters where there were any unambiguous matches reported. Finally, for each remaining taxon cluster, we report it as one hit if is a strong ambiguous match (defined as having at least four markers and eight reads) by joining names of taxa in the cluster and prepending with a "?" (Figure 2, step 7).
+We wrote our software, CORALE - for \underline{C}lustering \underline{o}f \underline{R}eference \underline{Al}ignm\underline{e}nts - as a Nextflow workflow wrapping a Python module. It provisions sequence files, aligns them to the reference of markers, and produces a taxonomic profile through a seven-step procedure (Figure 2). First, we run `bowtie2` and keep all alignments that are at least 60 nucleotides in length (Figure 2, step 1), which ensures that the matches contain enough information to be marker-specific. We then run Markov Clustering (MCL) on a graph of marker genes as nodes and counts of shared alignments as edge weights (Figure 2, step 2) to obtain marker clusters. We then calculate % match identities of alignments (Figure 2, step 3) and aggregate them by marker to obtain an identity average for each marker gene, as well as per cluster to obtain a cluster average. Each marker whose identity average is lower than the cluster average is an inferior representation for signal in the sample, so we next reject each taxon with ≥ 50% of such markers (Figure 2, step 4). We then group remaining taxa into taxon clusters using MCL with counts of multiply aligned reads (Figure 2, step 5), which allows us to reflect ambiguity of identification in reporting the hits. We then report unambiguous matches (defined as having average alignment identity of at least 97%, two different reads aligned to at least two markers) as is (Figure 2, step 6), while rejecting other taxa in taxon clusters where there were any unambiguous matches reported. Finally, for each remaining taxon cluster, we report it as one hit if is a strong ambiguous match (defined as having at least four markers and eight reads) by joining names of taxa in the cluster and prepending with a "?" (Figure 2, step 7).
 
 ![**CORALE - schematic**](figures/coraleSchematic.png)
 
@@ -102,13 +105,9 @@ Our approach could potentially be applied to processing alignments to any refere
 
 Additionally, the efficacy of using many alignments per read in combination with clustering demonstrated by CORALE shows that to develop new metagenomics tools, it can be worthwhile to view protein sequences as a similarity-based network: naturally occuring proteins form isolated clusters of similar sequence [@smith1970natural]. With additional theoretical work, this view could become a basis for predictions about presence of eukaryotes, potentially providing probabilistic estimates of certainty on reported results.
 
-
-\newpage
-
 ## Conclusion
 
-CORALE (for <u>C</u>lustering <u>o</u>f <u>R</u>eference <u>Al</u>ignm<u>e</u>nts) is a tool for identification of eukaryotes in shotgun metagenomic studies in which the results are not overwhelmed by false positives. While CORALE is based on the same marker gene reference as EukDetect, it does not use EukDetect's approach to filtering, most notably not including the MAPQ ≥ 30 filter which we show to have species-specific impact on results. Its approach, based on multiple alignments and Markov clustering, results in sensitive and accurate detection, and is capable of inferring presence of eukaryotes not included in the reference. We show this to be the case using simulated samples with 'novel' species, as well as data from DIABIMMUNE, a large infant gut metagenome study. CORALE is also successfully deployed on our MicrobiomeDB.org resource, demonstrating the appropriateness of our method for large-scale screens of metagenomic data for the purpose of detecting eukaryotes.
-
+CORALE (for \underline{C}lustering \underline{o}f \underline{R}eference \underline{Al}ignm\underline{e}nts) is a tool for identification of eukaryotes in shotgun metagenomic studies in which the results are not overwhelmed by false positives. While CORALE is based on the same marker gene reference as EukDetect, it does not use EukDetect's approach to filtering, most notably not including the MAPQ ≥ 30 filter which we show to have species-specific impact on results. Its approach, based on multiple alignments and Markov clustering, results in sensitive and accurate detection, and is capable of inferring presence of eukaryotes not included in the reference. We show this to be the case using simulated samples with 'novel' species, as well as data from DIABIMMUNE, a large infant gut metagenome study. CORALE is also successfully deployed on our MicrobiomeDB.org resource, demonstrating the appropriateness of our method for large-scale screens of metagenomic data for the purpose of detecting eukaryotes.
 
 \newpage
 
@@ -135,6 +134,4 @@ All results are publicly viewable and downloadable on MicrobiomeDB. In addition,
 [DIABIMMUNE - CORALE vs EukDetect comparison](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/diabimmuneComparison.zip)
 
 \newpage
-
-#Bibliography
 

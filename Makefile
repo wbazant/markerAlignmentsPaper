@@ -153,6 +153,7 @@ supplement/diabimmune.xlsx: diabimmune-comparison
 		--output-xlsx diabimmune.tmp.xlsx && mv diabimmune.tmp.xlsx supplement/diabimmune.xlsx
 
 paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx supplement/diabimmune.xlsx
-	perl -pe 's/≥/>=/g; s/μ/M/g; s/≤/<=/g' paper.md >  out.md
+	perl -pe 's/≥/\$$\\geq\$$/g; s/μ/\$$\\mu\$$/g; s/≤/\$$\\leq\$$/g' paper.md >  out.md
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown out.md  --pdf-engine=xelatex -o paper.pdf
+	perl -pe 's/≥/>=/g; s/μ/M/g; s/≤/<=/g' paper.md >  out.md
 	pandoc -s --bibliography biblio.bib  --citeproc -f markdown out.md  --pdf-engine=xelatex -o paper.rtf

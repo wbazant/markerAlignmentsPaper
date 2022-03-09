@@ -146,11 +146,14 @@ supplement/simulatedReads.xlsx: tmp/wgsimMutationRate.json tmp/precisionBySpecie
 		--output-xlsx supplement/simulatedReads.xlsx
 
 supplement/diabimmune.xlsx: diabimmune-comparison
+	perl -nE 'my (@xs) = split "\t"; my ($$gid) = m{20/(.*?)_R1}; say join "\t", $$xs[0], $$gid'  diabimmune-comparison/DIABIMMUNE_WGS-sampleToFastqs.tsv > tmp.diabimmune-comparison-sample-to-run.tsv
 	python3 scripts/make_diabimmune_spreadsheet.py \
+		--refdb-ncbi refdb/taxa.sqlite \
 		--input-tsv-triples-our-num-markers "diabimmune-comparison/diabimmune-our-results-triples.taxon_num_markers.tsv" \
 		--input-tsv-triples-our-num-reads "diabimmune-comparison/diabimmune-our-results-triples.taxon_num_reads.tsv" \
 		--input-csv-eukdetect "diabimmune-comparison/diabimmune-results-published-with-eukdetect.csv" \
-		--output-xlsx diabimmune.tmp.xlsx && mv diabimmune.tmp.xlsx supplement/diabimmune.xlsx
+		--input-tsv-sample-to-run "tmp.diabimmune-comparison-sample-to-run.tsv" \
+		--output-xlsx diabimmune.tmp.xlsx && mv diabimmune.tmp.xlsx supplement/diabimmune.xlsx	&& rm tmp.diabimmune-comparison-sample-to-run.tsv
 
 paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx supplement/diabimmune.xlsx
 	perl -pe 's/≥/\$$\\geq\$$/g; s/μ/\$$\\mu\$$/g; s/≤/\$$\\leq\$$/g' paper.md >  out.md

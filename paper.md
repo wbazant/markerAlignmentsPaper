@@ -127,11 +127,11 @@ All our software is publicly available under the MIT license: CORALE (*github.co
 
 All results are publicly viewable and downloadable on MicrobiomeDB. In addition, the following files are available as supplemental material: 
 
-[Simulated whole samples - results for different methods](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/wgsimWholeSamplesOneTenthCoverage.xlsx)
+[LINK: Simulated whole samples - results for different methods](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/wgsimWholeSamplesOneTenthCoverage.xlsx)
 
-[Simulated reads - per-species breakdown and aggregate stats](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/simulatedReads.xlsx)
+[LINK: Simulated reads - per-species breakdown and aggregate stats](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/simulatedReads.xlsx)
 
-[DIABIMMUNE - CORALE vs EukDetect comparison](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/diabimmuneComparison.zip)
+[LINK: DIABIMMUNE - CORALE vs EukDetect comparison](https://github.com/wbazant/markerAlignmentsPaper/raw/master/supplement/diabimmune.xlsx)
 
 \newpage
 

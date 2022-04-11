@@ -155,13 +155,13 @@ supplement/diabimmune.xlsx: diabimmune-comparison
 		--input-tsv-sample-to-run "tmp.diabimmune-comparison-sample-to-run.tsv" \
 		--output-xlsx diabimmune.tmp.xlsx && mv diabimmune.tmp.xlsx supplement/diabimmune.xlsx	&& rm tmp.diabimmune-comparison-sample-to-run.tsv
 
-microbiomedb_results/microbiomedb_stats.txt: ./microbiomedb_results/BONUS.eukdetect.lineage_abundance.tsv
-	python3 scripts/microbiomedb_stats.py --input-results-dir ./microbiomedb_results --input-name-postfix .eukdetect.lineage_abundance.tsv \
-	 | grep -v dtype \
-	 > microbiomedb_results/microbiomedb_stats.txt
+supplement/microbiomedb.xlsx: ./microbiomedb_results/BONUS.eukdetect.lineage_abundance.tsv
+	python3 scripts/make_microbiomedb_stats_spreadsheet.py \
+		--input-results-dir ./microbiomedb_results --input-name-postfix .eukdetect.lineage_abundance.tsv \
+		--output-xlsx supplement/microbiomedb.xlsx
 
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx supplement/diabimmune.xlsx microbiomedb_results/microbiomedb_stats.txt
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx
 	perl -pe 's/≥/\$$\\geq\$$/g; s/μ/\$$\\mu\$$/g; s/≤/\$$\\leq\$$/g' paper.md >  out.md
 	pandoc -s --bibliography biblio.bib  --citeproc --csl bmc-bioinformatics.csl -f markdown out.md  --pdf-engine=xelatex -o paper.pdf
 	perl -pe 's/≥/>=/g; s/μ/M/g; s/≤/<=/g' paper.md >  out.md

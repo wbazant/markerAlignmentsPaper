@@ -4,17 +4,9 @@ import os
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), "../"))
 from lib.ncbi2 import NCBITaxa2
 import argparse
-import pysam
 import re
 import json
-import statistics
-import logging
-import subprocess
-import sqlite3
-import itertools
-import numpy as np
 
-import matplotlib.pyplot as plt
 import xlsxwriter
 import pandas
 
@@ -80,7 +72,7 @@ def read(refdb_ncbi, triples_our_markers, triples_our_reads, csv_eukdetect, samp
 def do(refdb_ncbi, triples_our_markers, triples_our_reads, csv_eukdetect, sample_to_run, output_xlsx):
     m = read(refdb_ncbi, triples_our_markers, triples_our_reads, csv_eukdetect, sample_to_run)
     with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-        sheet_name = "DIABIMMUNE results"
+        sheet_name = "diabimmune results"
         m.to_excel(writer, sheet_name = sheet_name,  float_format="%.2f")
         worksheet = writer.sheets[sheet_name]
         fix_column_width(writer, sheet_name=sheet_name, df = m)

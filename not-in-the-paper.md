@@ -642,3 +642,91 @@ Really good distinction between binning and profiling!
 
 \newpage
 #Bibliography
+
+## Future work
+
+new methods of taxonomic profiling from marker gene alignments based on more natural set of parameters, 
+
+based on fewer parameters, further gains in sensitivity and specificity, and aid in developing methods based on fewer parameters and and methods of eukaryotic detection that provide probabilistic estimates  more sensitive and accurate methods,
+
+potentially involves modelling the space of all biological proteins,
+
+
+Successfully incorporating this information is 
+could be more successful,
+
+
+There could be more sequences in the reference
+
+Biological proteins are not uniformly distributed across the space of all possible proteins - instead, they form isolated clusters of similar sequence [@smith1970natural]. 
+
+
+
+CORRAL leverages this naturally occuring structure when making comparisons involving match identity within marker clusters (**Figure 2, step 3 **), and converting them into an estimate of what is present in the sample with a majority vote - style heuristic (**Figure 2, step 4 **).
+Optimal 
+The contents of the reference of marker genes, and how exactly to use it, is an exciting
+should be higher than usual, because their sequences are similar,
+
+
+We have opted 
+
+
+
+because the space of proteins is very complex
+
+preliminary investigation into this extension proved challenging
+
+and furthermore, sequence similarity within those clusters is related to evolutionary history of taxa [@Cheng2014].
+
+We were not able to find any work that would tell us how an 
+
+
+We would like a better 
+
+This is a flexible approach to detection which handles both redundancy and incompleteness of the reference, but we were not able 
+
+it is not able to offer probabilistic estimates about presence of reported taxa. 
+
+Additional theoretical work could yield a more structured approach, potentially yielding more structured, higher quality predictions.
+
+
+There may be an appropriate model
+
+With additional theoretical work, it could
+similarity between biological proteins and use it to combine information from aligned reads, potentially yielding more structured, higher quality predicitons.
+
+This is a flexible and lightweight solution, but a more structured approach could result in higher quality predictions, and .
+
+
+but an approach involving a pre-computed model of similarity between proteins, and better information in each aligned read could result in higher quality, more structured predictions about s
+
+Additional theoretical work on similarity of proteins could result of i
+
+CORRAL does not need to be given reference data, but this results in an ad-hoc me
+
+
+but tools like `bowtie`, developed in the context of a single-organism reference like the human genome [@langmead2009ultrafast], aim to correctly locate reads in the reference rather than identify the source of the reads. 
+
+With additional theoretical work, taxonomic profiling of a metagenomic sample could be viewed as a task of identifying sequences in the
+
+ protein network
+
+ sequences in the protein network,
+information on similarity of natural proteins could be used to 
+
+identifying species by treating metagenomic reads as clues for locating sequences in the protein network.
+
+Future methods of using alignments for metagenomic profiling could include information on similarity of natural proteins 
+
+incorporate similarity structure of naturally known proteins to recognise reads from 'novel' species - 
+
+As the number of species with known reference genomes increases, the scientific community gains an increasingly finer-grained understanding of similarity between protein sequences that evolution produces. 
+
+In the future and this could become a basis of taxonomic profiling that includes about presence of eukaryotes 
+
+ produced by evolution, and this co
+
+ increasing number of species 
+Similarity structure of naturally occurring proteins, which we can species with known reference genomes,
+
+With additional work, known similarity between naturally occurring proteins could become a basis for predictions about presence of eukaryotes, potentially providing probabilistic estimates of certainty on reported results.

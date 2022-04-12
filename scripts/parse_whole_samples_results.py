@@ -53,29 +53,29 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
 
 def ct(n, rank):
     if n == 1 and rank == "genus":
-        return "One result, correct genus"
+        return "One result, same genus"
     if n > 1 and rank == "genus":
-        return "Many results, correct genus"
+        return "Many results, same genus"
     if n == 1 and rank != "genus":
-        return "One result, incorrect genus"
+        return "One result, not same genus"
     if n > 1 and rank != "genus":
-        return "Many results, incorrect genus"
+        return "Many results, not same genus"
 
 header = [
 "No results",
-"One result, correct genus" ,
-"Many results, correct genus",
-"One result, incorrect genus",
-"Many results, incorrect genus",
+"One result, same genus" ,
+"Many results, same genus",
+"One result, not same genus",
+"Many results, not same genus",
 "Signal detected",
 "Detected signal is one species"
 ]
 header_shortcuts = {
         "No results": "NR",
-        "One result, correct genus": "OC" ,
-        "Many results, correct genus": "MC",
-        "One result, incorrect genus": "OI",
-        "Many results, incorrect genus": "MI",
+        "One result, same genus": "OC" ,
+        "Many results, same genus": "MC",
+        "One result, not same genus": "OI",
+        "Many results, not same genus": "MI",
         "Signal detected": "SD = OC + MC + OI + MI",
         "Detected signal is one species": "(OC + OI) / SD"
 }
@@ -83,7 +83,7 @@ header_shortcuts = {
 def add_stats(counts):
     s = sum(counts.values())
     counts["Signal detected"] = round(1.0 * (s - counts["No results"] ) / s, 3)
-    counts["Detected signal is one species"] = round(1.0 * (counts["One result, correct genus"] + counts["One result, incorrect genus"]) / (s - counts["No results"]), 3)
+    counts["Detected signal is one species"] = round(1.0 * (counts["One result, same genus"] + counts["One result, not same genus"]) / (s - counts["No results"]), 3)
 
 def sc(all_results, input_file, taxid):
     if taxid not in all_results[input_file]:

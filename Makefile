@@ -39,6 +39,10 @@ unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 	ls `pwd`/unknownEuks/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > unknownEuksBowtie2/in.tsv
 	bash scripts/run_our_method_on_unknown_euks.sh `pwd`/unknownEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/unknownEuksBowtie2/work `pwd`/unknownEuksBowtie2/results.tmp `pwd`/unknownEuksBowtie2/results
 
+unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv: unknownEuksBowtie2/results/our-method.results-summary.tsv
+	perl -nE 'chomp; my ($$id, $$num, @xs) = split ("\t", $$_, -1); @xs = grep {$$_} @xs; die "$$num bad: $$_" unless $$num == @xs; @ys = grep {$$_ !~/^\?/ } @xs ;say join "\t", $$id, scalar @ys, @ys' unknownEuksBowtie2/results/our-method.results-summary.tsv > unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
+
+
 unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv
 	mkdir -pv unknownEuksUnmodifiedEukdetect
 	(cd unknownEuksUnmodifiedEukdetect && rm -rf input && ln -sv ../unknownEuks/input input)
@@ -52,21 +56,22 @@ unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.
 
 
 
-unknownEuksBowtie2/results-summary-all.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv
+unknownEuksBowtie2/results-summary-all.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
 	python3 scripts/parse_whole_samples_results.py \
 		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
 		--refdb-ncbi refdb/taxa.sqlite \
 		--input "No filter:unknownEuksBowtie2/results/no-filter.results-summary.tsv" \
-		--input "m2:unknownEuksBowtie2/results/m2.results-summary.tsv" \
-		--input "M30:unknownEuksBowtie2/results/M30.results-summary.tsv" \
-		--input "r4:unknownEuksBowtie2/results/r4.results-summary.tsv" \
-		--input "m2M30:unknownEuksBowtie2/results/m2M30.results-summary.tsv" \
-		--input "m2r4:unknownEuksBowtie2/results/m2r4.results-summary.tsv" \
-		--input "r4M30:unknownEuksBowtie2/results/r4M30.results-summary.tsv" \
-		--input "m2r4M30:unknownEuksBowtie2/results/m2r4M30.results-summary.tsv" \
-		--input "EukDetect:unknownEuksUnmodifiedEukdetect/results-summary.tsv" \
-		--input "modified EukDetect (MAPQ>=5):unknownEuks/results-summary.tsv" \
-		--input "our method:unknownEuksBowtie2/results/our-method.results-summary.tsv" \
+		--input "Two markers:unknownEuksBowtie2/results/m2.results-summary.tsv" \
+		--input "MAPQ >=30:unknownEuksBowtie2/results/M30.results-summary.tsv" \
+		--input "Four reads:unknownEuksBowtie2/results/r4.results-summary.tsv" \
+		--input "Two markers, MAPQ>=30:unknownEuksBowtie2/results/m2M30.results-summary.tsv" \
+		--input "Two markers, four reads:unknownEuksBowtie2/results/m2r4.results-summary.tsv" \
+		--input "Four reads, MAPQ>=30:unknownEuksBowtie2/results/r4M30.results-summary.tsv" \
+		--input "Two markers, four reads, MAPQ>=30:unknownEuksBowtie2/results/m2r4M30.results-summary.tsv" \
+		--input "EukDetect (MAPQ>=30):unknownEuksUnmodifiedEukdetect/results-summary.tsv" \
+		--input "EukDetect (MAPQ>=5):unknownEuks/results-summary.tsv" \
+		--input "CORRAL (all hits):unknownEuksBowtie2/results/our-method.results-summary.tsv" \
+		--input "CORRAL (unambiguous hits only):unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv" \
 		--output-tsv unknownEuksBowtie2/results-summary-all.tsv \
 		--output-xlsx supplement/wgsimWholeSamplesOneTenthCoverage.xlsx
 
@@ -122,6 +127,8 @@ figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
 	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species --output-tsv supplement/precisionBySpecies.tsv
 
 figures/dropoutForFilters.png: unknownEuksBowtie2/results-summary-all.tsv
+	echo "Needs fixing!"
+	exit 1
 	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv unknownEuksBowtie2/results-summary-all.tsv --output-png figures/dropoutForFilters.png
 
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
@@ -161,7 +168,7 @@ supplement/microbiomedb.xlsx: ./microbiomedb_results/BONUS.eukdetect.lineage_abu
 		--output-xlsx supplement/microbiomedb.xlsx
 
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv figures/dropoutForFilters.png supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx
 	perl -pe 's/≥/\$$\\geq\$$/g; s/μ/\$$\\mu\$$/g; s/≤/\$$\\leq\$$/g' paper.md >  out.md
 	pandoc -s --bibliography biblio.bib  --citeproc --csl bmc-bioinformatics.csl -f markdown out.md  --pdf-engine=xelatex -o paper.pdf
 	perl -pe 's/≥/>=/g; s/μ/M/g; s/≤/<=/g; s/for .*?lust.*?ignments/for Clustering Of Related Reference ALignments/g' paper.md >  out.md

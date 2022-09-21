@@ -68,7 +68,9 @@ header = [
 "One result, not same genus",
 "Many results, not same genus",
 "Signal detected",
-"Detected signal is one species"
+"Detected signal is one species",
+"Detected signal is same genus",
+"Detected signal is one same genus species",
 ]
 header_shortcuts = {
         "No results": "NR",
@@ -77,13 +79,17 @@ header_shortcuts = {
         "One result, not same genus": "OI",
         "Many results, not same genus": "MI",
         "Signal detected": "SD = OC + MC + OI + MI",
-        "Detected signal is one species": "(OC + OI) / SD"
+        "Detected signal is one species": "(OC + OI) / SD",
+        "Detected signal is same genus": "(OC + MC) / SD",
+        "Detected signal is one same genus species": "OC / SD",
 }
 
 def add_stats(counts):
     s = sum(counts.values())
     counts["Signal detected"] = round(1.0 * (s - counts["No results"] ) / s, 3)
     counts["Detected signal is one species"] = round(1.0 * (counts["One result, same genus"] + counts["One result, not same genus"]) / (s - counts["No results"]), 3)
+    counts["Detected signal is same genus"] = round(1.0 * (counts["One result, same genus"] + counts["Many results, same genus"]) / (s - counts["No results"]), 3)
+    counts["Detected signal is one same genus species"] = round(1.0 * counts["One result, same genus"] / (s - counts["No results"]), 3)
 
 def sc(all_results, input_file, taxid):
     if taxid not in all_results[input_file]:

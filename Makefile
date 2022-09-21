@@ -29,8 +29,9 @@ unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
 unknownEuks/results-summary.tsv: unknownEuks/conf.yaml
 	perl -i -pe 's{bowtie2( --threads \d+)?( --seed \d+)?}{bowtie2 --threads 1 --seed 1337}g' ~/dev/EukDetect/rules/eukdetect.rules
 	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 5 -bS}g' ~/dev/EukDetect/rules/eukdetect.rules
-	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 runall
-	head unknownEuks/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuks/results-summary.tsv
+	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 --rerun-incomplete runall
+	bash scripts/summarise_euk_results.sh unknownEuks/results/*filtered_hits_table.txt > unknownEuks/results-summary.tsv
+	bash scripts/summarise_euk_results.sh unknownEuks/results/filtering/*all_hits_table.txt > unknownEuks/results-summary-unfiltered.tsv
 
 unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 	mkdir -pv unknownEuksBowtie2
@@ -52,7 +53,8 @@ unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.
 	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 30 -bS}g' ~/dev/EukDetect/rules/eukdetect.rules
 	
 	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuksUnmodifiedEukdetect/conf.yaml  --cores 1 --rerun-incomplete runall
-	head unknownEuksUnmodifiedEukdetect/results/*_hits_table.txt | perl -E '$$/ = "==>"; while(<>){my ($$header, @ls) = split "\n"; @ls = grep {not $$_ =~ m/^Name|^\w*$$|Empty read count|No taxa passing|==>/} @ls; my ($$fromSpecies) = $$header =~ m{results/(.*)_filtered_hits}; $$_ =~ s{\t.*}{} for @ls; say join "\t", $$fromSpecies, scalar @ls, @ls;  }' > unknownEuksUnmodifiedEukdetect/results-summary.tsv
+	bash scripts/summarise_euk_results.sh unknownEuksUnmodifiedEukdetect/results/*filtered_hits_table.txt > unknownEuksUnmodifiedEukdetect/results-summary.tsv
+	bash scripts/summarise_euk_results.sh unknownEuksUnmodifiedEukdetect/results/filtering/*all_hits_table.txt > unknownEuksUnmodifiedEukdetect/results-summary-unfiltered.tsv
 
 
 
@@ -69,7 +71,9 @@ unknownEuksBowtie2/results-summary-all.tsv: unknownEuks/results-summary.tsv unkn
 		--input "Four reads, MAPQ>=30:unknownEuksBowtie2/results/r4M30.results-summary.tsv" \
 		--input "Two markers, four reads, MAPQ>=30:unknownEuksBowtie2/results/m2r4M30.results-summary.tsv" \
 		--input "EukDetect (MAPQ>=30):unknownEuksUnmodifiedEukdetect/results-summary.tsv" \
+		--input "EukDetect sensitive (MAPQ>=30):unknownEuksUnmodifiedEukdetect/results-summary-unfiltered.tsv" \
 		--input "EukDetect (MAPQ>=5):unknownEuks/results-summary.tsv" \
+		--input "EukDetect sensitive (MAPQ>=5):unknownEuks/results-summary-unfiltered.tsv" \
 		--input "CORRAL (all hits):unknownEuksBowtie2/results/our-method.results-summary.tsv" \
 		--input "CORRAL (unambiguous hits only):unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv" \
 		--output-tsv unknownEuksBowtie2/results-summary-all.tsv \

@@ -13,6 +13,8 @@ import subprocess
 import sqlite3
 import pandas
 
+from scipy.stats.mstats import hmean
+
 from marker_alignments.store import SqliteStore
 
 from pathlib import Path
@@ -51,11 +53,11 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
     return result
 
 
-def ct(n, rank, all_good):
+def ct(n, rank, all_good, some_good):
     result = []
     result.append("One result" if n == 1 else "Many results")
     result.append("same genus" if rank == "genus" else "not same genus")
-    result.append("taxonomically closest" if all_good else "not taxonomically closest")
+    result.append("all taxonomically closest" if all_good else "part taxonomically closest" if some_good else "not taxonomically closest")
     return ", ".join(result)
 
 header_data = [   ('No results', 'NR'),
@@ -63,6 +65,8 @@ header_data = [   ('No results', 'NR'),
     ('Many results, same genus, all taxonomically closest', 'pGC'),
     ('One result, not same genus, all taxonomically closest', 'PgC'),
     ('Many results, not same genus, all taxonomically closest', 'pgC'),
+    ('Many results, same genus, part taxonomically closest', 'pGO'),
+    ('Many results, not same genus, part taxonomically closest', 'pgO'),
     ('One result, same genus, not taxonomically closest', 'PGc'),
     ('Many results, same genus, not taxonomically closest', 'pGc'),
     ('One result, not same genus, not taxonomically closest', 'Pgc'),
@@ -71,13 +75,24 @@ header_data = [   ('No results', 'NR'),
     ('Detected signal is one species', 'P.. / SD'),
     ('Detected signal is same genus', '.G. / SD'),
     ('Detected signal is one same genus species', 'PG. / SD'),
-    ('Detected signal is taxonomically closest', '..C / SD'),
+    ('Detected signal is all taxonomically closest', '..C / SD'),
     ('Detected signal is one taxonomically closest species', 'P.C / SD'),
-    (   'Detected signal is one same genus taxonomically closest species',
-        'PGC / SD')]
+    ('Detected signal is one same genus taxonomically closest species', 'PGC / SD')]
 
 header_shortcuts = dict(header_data)
 header = [x for x,y in header_data]
+
+def frac_to_score(x):
+    return int(round(x*5, 0)) or 1
+
+def scorecard(df_summary):
+    result = pandas.DataFrame()
+    result["Method"] = df_summary["Name"]
+    result["Reports anything at all"] = df_summary["SD = (total - NR) / total: Signal detected"].map(frac_to_score)
+    result["Reports one result rather than many"] = df_summary["P.. / SD: Detected signal is one species"].map(frac_to_score)
+    result["Reports only closely related species"] = df_summary[[".G. / SD: Detected signal is same genus", "..C / SD: Detected signal is all taxonomically closest"]].apply(hmean, axis=1).map(frac_to_score)
+    return result
+        
 
 def pat(xs, counts):
     s = 0
@@ -120,9 +135,10 @@ def do_one_line(scrambled_name_to_taxid, ncbi, good_matches, xs):
     if n:
         vs = [ncbi.get_taxid_from_string(x) for x in xs]
         all_good = all([(source_taxid, int(v)) in good_matches for v in vs]) 
+        some_good = any([(source_taxid, int(v)) in good_matches for v in vs]) 
         vs.append(str(source_taxid))
         rank = ncbi.get_match_type(vs)
-        return source_taxid, ct(n, rank, all_good)
+        return source_taxid, ct(n, rank, all_good, some_good)
     else:
         return source_taxid, "No results"
 
@@ -199,8 +215,16 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files, o
     df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
     if output_xlsx:
+        df_scorecard = scorecard(df_summary)
         with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-            sheet_name_summary = "Summary"
+            sheet_name_scorecard = "Scorecard"
+            df_scorecard.to_excel(writer, sheet_name=sheet_name_scorecard, index = False)
+            worksheet_scorecard = writer.sheets[sheet_name_scorecard]
+            cell_format_scorecard = writer.book.add_format({'bold': True})
+            worksheet_scorecard.set_column(0, 0, 30,cell_format_scorecard )
+            fix_column_width(writer, sheet_name=sheet_name_scorecard, df = df_scorecard)
+
+            sheet_name_summary = "Counts and stats"
             df_summary.to_excel(writer, sheet_name=sheet_name_summary, index = False)
             worksheet_summary = writer.sheets[sheet_name_summary]
             cell_format_summary = writer.book.add_format({'bold': True})
@@ -215,9 +239,7 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files, o
             fix_column_width(writer, sheet_name=sheet_name_detailed, df = df_detailed)
 
 
-
-
-def main(argv=sys.argv[1:]):
+def parse(argv):
     parser = argparse.ArgumentParser(
       description="parse_whole_samples_results",
       formatter_class = argparse.RawDescriptionHelpFormatter,
@@ -228,10 +250,11 @@ def main(argv=sys.argv[1:]):
     parser.add_argument("--input", type=str, action="append", dest="input_files", help = "results summary inputs", required = True)
     parser.add_argument("--output-tsv", type=str, action="store", dest="output_tsv", help = "result tsv", required = True)
     parser.add_argument("--output-xlsx", type=str, action="store", dest="output_xlsx", help = "result xlsx", default = None)
+    return parser.parse_args(argv)
 
 
-
-    options=parser.parse_args(argv)
+def main(argv=sys.argv[1:]):
+    options=parse(argv)
     do(**vars(options))
 
 

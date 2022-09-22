@@ -51,65 +51,82 @@ def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
     return result
 
 
-def ct(n, rank):
-    if n == 1 and rank == "genus":
-        return "One result, same genus"
-    if n > 1 and rank == "genus":
-        return "Many results, same genus"
-    if n == 1 and rank != "genus":
-        return "One result, not same genus"
-    if n > 1 and rank != "genus":
-        return "Many results, not same genus"
+def ct(n, rank, all_good):
+    result = []
+    result.append("One result" if n == 1 else "Many results")
+    result.append("same genus" if rank == "genus" else "not same genus")
+    result.append("taxonomically closest" if all_good else "not taxonomically closest")
+    return ", ".join(result)
 
-header = [
-"No results",
-"One result, same genus" ,
-"Many results, same genus",
-"One result, not same genus",
-"Many results, not same genus",
-"Signal detected",
-"Detected signal is one species",
-"Detected signal is same genus",
-"Detected signal is one same genus species",
-]
-header_shortcuts = {
-        "No results": "NR",
-        "One result, same genus": "OC" ,
-        "Many results, same genus": "MC",
-        "One result, not same genus": "OI",
-        "Many results, not same genus": "MI",
-        "Signal detected": "SD = OC + MC + OI + MI",
-        "Detected signal is one species": "(OC + OI) / SD",
-        "Detected signal is same genus": "(OC + MC) / SD",
-        "Detected signal is one same genus species": "OC / SD",
-}
+header_data = [   ('No results', 'NR'),
+    ('One result, same genus, all taxonomically closest', 'PGC'),
+    ('Many results, same genus, all taxonomically closest', 'pGC'),
+    ('One result, not same genus, all taxonomically closest', 'PgC'),
+    ('Many results, not same genus, all taxonomically closest', 'pgC'),
+    ('One result, same genus, not taxonomically closest', 'PGc'),
+    ('Many results, same genus, not taxonomically closest', 'pGc'),
+    ('One result, not same genus, not taxonomically closest', 'Pgc'),
+    ('Many results, not same genus, not taxonomically closest', 'pgc'),
+    ('Signal detected', 'SD = (total - NR) / total'),
+    ('Detected signal is one species', 'P.. / SD'),
+    ('Detected signal is same genus', '.G. / SD'),
+    ('Detected signal is one same genus species', 'PG. / SD'),
+    ('Detected signal is taxonomically closest', '..C / SD'),
+    ('Detected signal is one taxonomically closest species', 'P.C / SD'),
+    (   'Detected signal is one same genus taxonomically closest species',
+        'PGC / SD')]
+
+header_shortcuts = dict(header_data)
+header = [x for x,y in header_data]
+
+def pat(xs, counts):
+    s = 0
+    for l, c in counts.items():
+        if l == 'No results' or c == 0 or len(l.split(", ")) < len(xs):
+            continue
+        m = True
+        for n in range(0, len(xs)):
+            m = m and (xs[n] == "." or xs[n] == l.split(", ")[n])
+        if m:
+            s += c
+    return s
+
 
 def add_stats(counts):
     s = sum(counts.values())
-    counts["Signal detected"] = round(1.0 * (s - counts["No results"] ) / s, 3)
-    counts["Detected signal is one species"] = round(1.0 * (counts["One result, same genus"] + counts["One result, not same genus"]) / (s - counts["No results"]), 3)
-    counts["Detected signal is same genus"] = round(1.0 * (counts["One result, same genus"] + counts["Many results, same genus"]) / (s - counts["No results"]), 3)
-    counts["Detected signal is one same genus species"] = round(1.0 * counts["One result, same genus"] / (s - counts["No results"]), 3)
+    S = pat([".", ".", "."], counts)
+
+    counts_with_stats = counts.copy()
+    counts_with_stats["Signal detected"] = round(1.0 * pat([".", ".", "."], counts) / s, 3)
+    counts_with_stats["Detected signal is one species"] = round(1.0 * pat(["One result", ".", "."], counts) / pat([".", ".", "."], counts), 3)
+    counts_with_stats["Detected signal is same genus"] = round(1.0 * pat([".", "same genus", "."], counts) / pat([".", ".", "."], counts), 3)
+    counts_with_stats["Detected signal is one same genus species"] = round(1.0 * pat(["One result", "same genus", "."], counts) / pat([".", ".", "."], counts), 3)
+    counts_with_stats["Detected signal is all taxonomically closest"] = round(1.0 * pat([".", ".", "all taxonomically closest"], counts) / pat([".", ".", "."], counts), 3)
+    counts_with_stats["Detected signal is one taxonomically closest species"] = round(1.0 * pat(["One result", ".", "all taxonomically closest"], counts) / pat([".", ".", "."], counts), 3)
+    counts_with_stats["Detected signal is one same genus taxonomically closest species"] = round(1.0 * pat(["One result", "same genus", "all taxonomically closest"], counts) / pat([".", ".", "."], counts), 3)
+
+    return counts_with_stats
 
 def sc(all_results, input_file, taxid):
     if taxid not in all_results[input_file]:
-        return "XX"
+        return "XXX"
     return header_shortcuts[all_results[input_file][taxid]]
 
 
-def do_one_line(scrambled_name_to_taxid, ncbi, xs):
+def do_one_line(scrambled_name_to_taxid, ncbi, good_matches, xs):
     source_taxon = xs.pop(0)
     source_taxid = scrambled_name_to_taxid[source_taxon]
     n = int(xs.pop(0))
     if n:
         vs = [ncbi.get_taxid_from_string(x) for x in xs]
+        all_good = all([(source_taxid, int(v)) in good_matches for v in vs]) 
         vs.append(str(source_taxid))
         rank = ncbi.get_match_type(vs)
-        return source_taxid, ct(n, rank)
+        return source_taxid, ct(n, rank, all_good)
     else:
         return source_taxid, "No results"
 
-def do_one(scrambled_name_to_taxid, ncbi, input_file):
+def do_one(scrambled_name_to_taxid, ncbi, good_matches, input_file):
     counts = {h:0 for h in header}
     cs_for_species = {}
     with open(input_file, 'r') as f:
@@ -118,17 +135,22 @@ def do_one(scrambled_name_to_taxid, ncbi, input_file):
             if len(xs) < 2 or not xs[0]:
                 continue
             try:
-                source_taxid, c = do_one_line(scrambled_name_to_taxid, ncbi, xs)
+                source_taxid, c = do_one_line(scrambled_name_to_taxid, ncbi, good_matches, xs)
             except KeyError as e:
                 raise ValueError(input_file, xs, l)
             counts[c]+=1
             cs_for_species[source_taxid] = c
 
-    add_stats(counts)
-    return counts, cs_for_species
+    counts_with_stats = add_stats(counts)
+    return counts_with_stats, cs_for_species
 
-def read_all(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
+def read_good_matches(good_matches_path):
+    df = pandas.read_csv(good_matches_path, sep = "\t")
+    return set(zip(df["Holdout taxid"].astype(int), df["Reference taxid"].astype(int)))
+
+def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files):
     scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
+    good_matches = read_good_matches(good_matches_path)
 
     ncbi = NCBITaxa2(refdb_ncbi)
     lines = []
@@ -146,7 +168,7 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path, input_files):
             input_name = input_file
             input_path = input_file
         input_names.append(input_name)
-        counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, input_path)
+        counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, good_matches, input_path)
         all_counts[input_name] = counts
         all_results[input_name] = cs_for_species
 
@@ -171,25 +193,26 @@ def fix_column_width(writer, sheet_name, df):
     lengths = [len(str(df[col].name)) for idx, col in enumerate(df)]
     worksheet.set_column(0, len(lengths), max(lengths))
 
-def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files, output_tsv, output_xlsx):
-    df_detailed, df_summary = read_all(refdb_ncbi, refdb_marker_to_taxon_path, input_files)
+def do(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files, output_tsv, output_xlsx):
+    df_detailed, df_summary = read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files)
 
     df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
-    with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-        sheet_name_summary = "Summary"
-        df_summary.to_excel(writer, sheet_name=sheet_name_summary, index = False)
-        worksheet_summary = writer.sheets[sheet_name_summary]
-        cell_format_summary = writer.book.add_format({'bold': True})
-        worksheet_summary.set_column(0, 0, 30,cell_format_summary )
-        fix_column_width(writer, sheet_name=sheet_name_summary, df = df_summary)
+    if output_xlsx:
+        with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
+            sheet_name_summary = "Summary"
+            df_summary.to_excel(writer, sheet_name=sheet_name_summary, index = False)
+            worksheet_summary = writer.sheets[sheet_name_summary]
+            cell_format_summary = writer.book.add_format({'bold': True})
+            worksheet_summary.set_column(0, 0, 30,cell_format_summary )
+            fix_column_width(writer, sheet_name=sheet_name_summary, df = df_summary)
 
-        sheet_name_detailed = "Results by species"
-        df_detailed.to_excel(writer, sheet_name=sheet_name_detailed, index = False)
-        worksheet_detailed = writer.sheets[sheet_name_detailed]
-        cell_format_detailed = writer.book.add_format({'bold': True})
-        worksheet_detailed.set_column(0, 0, 30,cell_format_detailed )
-        fix_column_width(writer, sheet_name=sheet_name_detailed, df = df_detailed)
+            sheet_name_detailed = "Results by species"
+            df_detailed.to_excel(writer, sheet_name=sheet_name_detailed, index = False)
+            worksheet_detailed = writer.sheets[sheet_name_detailed]
+            cell_format_detailed = writer.book.add_format({'bold': True})
+            worksheet_detailed.set_column(0, 0, 30,cell_format_detailed )
+            fix_column_width(writer, sheet_name=sheet_name_detailed, df = df_detailed)
 
 
 
@@ -201,9 +224,10 @@ def main(argv=sys.argv[1:]):
     )
     parser.add_argument("--refdb-marker-to-taxon-path", type=str, action="store", dest="refdb_marker_to_taxon_path", help = "Lookup file, two columns - marker name, taxon name", required = True)
     parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa", required = True)
+    parser.add_argument("--good-matches-path", type=str, action="store", dest="good_matches_path", help = "List of matches we consider good", required = True)
     parser.add_argument("--input", type=str, action="append", dest="input_files", help = "results summary inputs", required = True)
     parser.add_argument("--output-tsv", type=str, action="store", dest="output_tsv", help = "result tsv", required = True)
-    parser.add_argument("--output-xlsx", type=str, action="store", dest="output_xlsx", help = "result xlsx", required = True)
+    parser.add_argument("--output-xlsx", type=str, action="store", dest="output_xlsx", help = "result xlsx", default = None)
 
 
 

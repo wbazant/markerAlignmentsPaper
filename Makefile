@@ -5,11 +5,21 @@ refdb/ncbi_eukprot_met_arch_markers.fna:
 	cd refdb
 	wget https://ndownloader.figshare.com/files/26173346
 	tar -zxvf 26173346
+	mv -v refdb/marker_genes_per_species.csv refdb/marker_genes_per_species.csv.orig
+	perl -pe 's{Acartia_fossae,#N/A}{Acartia_fossae,1453877}; s{Calanus_sinicus,#N/A}{Calanus_sinicus,114070}' refdb/marker_genes_per_species.csv.orig > refdb/marker_genes_per_species.csv
+	dos2unix refdb/marker_genes_per_species.csv
 
 refdbCrossValidation/nineTenth.fna.1.bt2: refdb/ncbi_eukprot_met_arch_markers.fna
 	mkdir -pv refdbCrossValidation
-	bash scripts/split_eukdb_reference.sh ./refdb/ ./refdbCrossValidation/oneTenth.fna ./refdbCrossValidation/oneTenthFolder ./refdbCrossValidation/nineTenth.fna
+	bash scripts/split_eukdb_reference.sh ./refdb/ ./refdbCrossValidation/oneTenth.fna ./refdbCrossValidation/oneTenthFolder ./refdbCrossValidation/nineTenth.fna ./refdbCrossValidation/oneTenth.csv ./refdbCrossValidation/nineTenth.csv
 	bowtie2-build ./refdbCrossValidation/nineTenth.fna ./refdbCrossValidation/nineTenth.fna
+
+refdbCrossValidation/goodMatches.tsv: refdbCrossValidation/nineTenth.fna.1.bt2
+	python scripts/taxonomize_reference_split.py \
+		--refdb-ncbi refdb/taxa.sqlite \
+		--holdout-species-path ./refdbCrossValidation/oneTenth.csv \
+		--remaining-species-path ./refdbCrossValidation/nineTenth.csv \
+		--out-tsv-path refdbCrossValidation/goodMatches.tsv
 
 refdbDoubled/doubled.fna.1.bt2: refdbCrossValidation/nineTenth.fna.1.bt2
 	mkdir -pv refdbDoubled
@@ -58,10 +68,11 @@ unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.
 
 
 
-unknownEuksBowtie2/results-summary-all.tsv: unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
+unknownEuksBowtie2/results-summary-all.tsv: refdbCrossValidation/goodMatches.tsv unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
 	python3 scripts/parse_whole_samples_results.py \
 		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
 		--refdb-ncbi refdb/taxa.sqlite \
+		--good-matches-path refdbCrossValidation/goodMatches.tsv \
 		--input "No filter:unknownEuksBowtie2/results/no-filter.results-summary.tsv" \
 		--input "Two markers:unknownEuksBowtie2/results/m2.results-summary.tsv" \
 		--input "MAPQ >=30:unknownEuksBowtie2/results/M30.results-summary.tsv" \

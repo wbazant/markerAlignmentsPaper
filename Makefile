@@ -9,6 +9,10 @@ refdb/ncbi_eukprot_met_arch_markers.fna:
 	perl -pe 's{Acartia_fossae,#N/A}{Acartia_fossae,1453877}; s{Calanus_sinicus,#N/A}{Calanus_sinicus,114070}' refdb/marker_genes_per_species.csv.orig > refdb/marker_genes_per_species.csv
 	dos2unix refdb/marker_genes_per_species.csv
 
+EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules:
+	wget https://github.com/allind/EukDetect/archive/ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30.zip
+	unzip ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30.zip
+
 refdbCrossValidation/nineTenth.fna.1.bt2: refdb/ncbi_eukprot_met_arch_markers.fna
 	mkdir -pv refdbCrossValidation
 	bash scripts/split_eukdb_reference.sh ./refdb/ ./refdbCrossValidation/oneTenth.fna ./refdbCrossValidation/oneTenthFolder ./refdbCrossValidation/nineTenth.fna ./refdbCrossValidation/oneTenth.csv ./refdbCrossValidation/nineTenth.csv
@@ -29,42 +33,48 @@ refdbDoubled/doubled.fna.1.bt2: refdbCrossValidation/nineTenth.fna.1.bt2
 	cat ./refdbCrossValidation/oneTenth.fna | perl -pe 's/at2759/bt2759/g' | perl -pe 's/^/A/ unless /^>/'  >> refdbDoubled/doubled.fna
 	bowtie2-build refdbDoubled/doubled.fna refdbDoubled/doubled.fna
 
-
 unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
 	mkdir -pv unknownEuks
 	mkdir -pv unknownEuks/input
 	mkdir -pv unknownEuks/results
 	bash scripts/wgsim_one_tenth.sh refdbCrossValidation/oneTenthFolder refdbCrossValidation nineTenth.fna unknownEuks/input unknownEuks/conf.yaml unknownEuks/results
 
-unknownEuks/results-summary.tsv: unknownEuks/conf.yaml
-	perl -i -pe 's{bowtie2( --threads \d+)?( --seed \d+)?}{bowtie2 --threads 1 --seed 1337}g' ~/dev/EukDetect/rules/eukdetect.rules
-	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 5 -bS}g' ~/dev/EukDetect/rules/eukdetect.rules
-	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuks/conf.yaml  --cores 1 --rerun-incomplete runall
-	bash scripts/summarise_euk_results.sh unknownEuks/results/*filtered_hits_table.txt > unknownEuks/results-summary.tsv
-	bash scripts/summarise_euk_results.sh unknownEuks/results/filtering/*all_hits_table.txt > unknownEuks/results-summary-unfiltered.tsv
+unknownEuks/results-summary.tsv: unknownEuks/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh unknownEuks/conf.yaml 5 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules unknownEuks/results-summary.tsv unknownEuks/results-summary-unfiltered.tsv
+
+lowAbundanceEuks/conf.yaml: unknownEuks/conf.yaml
+	mkdir -pv lowAbundanceEuks
+	mkdir -pv lowAbundanceEuks/input
+	mkdir -pv lowAbundanceEuks/results
+	bash scripts/min_abundance_reads.sh unknownEuks/input refdb ncbi_eukprot_met_arch_markers.fna lowAbundanceEuks/input lowAbundanceEuks/conf.yaml lowAbundanceEuks/results
+
+lowAbundanceEuks/results-summary.tsv: lowAbundanceEuks/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh lowAbundanceEuks/conf.yaml 30 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules lowAbundanceEuks/results-summary.tsv lowAbundanceEuks/results-summary-unfiltered.tsv
+
+lowAbundanceEuksBowtie2/results/our-method.results-summary.tsv: lowAbundanceEuks/conf.yaml
+	mkdir -pv lowAbundanceEuksBowtie2
+	mkdir -pv lowAbundanceEuksBowtie2/results.tmp
+	mkdir -pv lowAbundanceEuksBowtie2/results
+	ls `pwd`/lowAbundanceEuks/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > lowAbundanceEuksBowtie2/in.tsv
+	bash scripts/run_CORRAL_with_variants.sh `pwd`/lowAbundanceEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/lowAbundanceEuksBowtie2/work `pwd`/lowAbundanceEuksBowtie2/results.tmp `pwd`/lowAbundanceEuksBowtie2/results
 
 unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 	mkdir -pv unknownEuksBowtie2
 	mkdir -pv unknownEuksBowtie2/results.tmp
 	mkdir -pv unknownEuksBowtie2/results
 	ls `pwd`/unknownEuks/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > unknownEuksBowtie2/in.tsv
-	bash scripts/run_our_method_on_unknown_euks.sh `pwd`/unknownEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/unknownEuksBowtie2/work `pwd`/unknownEuksBowtie2/results.tmp `pwd`/unknownEuksBowtie2/results
+	bash scripts/run_CORRAL_with_variants.sh `pwd`/unknownEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/unknownEuksBowtie2/work `pwd`/unknownEuksBowtie2/results.tmp `pwd`/unknownEuksBowtie2/results
 
 unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv: unknownEuksBowtie2/results/our-method.results-summary.tsv
 	perl -nE 'chomp; my ($$id, $$num, @xs) = split ("\t", $$_, -1); @xs = grep {$$_} @xs; die "$$num bad: $$_" unless $$num == @xs; @ys = grep {$$_ !~/^\?/ } @xs ;say join "\t", $$id, scalar @ys, @ys' unknownEuksBowtie2/results/our-method.results-summary.tsv > unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
 
 
-unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv
+unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
 	mkdir -pv unknownEuksUnmodifiedEukdetect
 	(cd unknownEuksUnmodifiedEukdetect && rm -rf input && ln -sv ../unknownEuks/input input)
 	mkdir -pv unknownEuksUnmodifiedEukdetect/results
 	perl -pe 's/unknownEuks/unknownEuksUnmodifiedEukdetect/g' unknownEuks/conf.yaml > unknownEuksUnmodifiedEukdetect/conf.yaml
-	perl -i -pe 's{bowtie2( --threads \d+)?( --seed \d+)?}{bowtie2 --threads 1 --seed 1337}g' ~/dev/EukDetect/rules/eukdetect.rules
-	perl -i -pe 's{samtools view -q \d+ -bS}{samtools view -q 30 -bS}g' ~/dev/EukDetect/rules/eukdetect.rules
-	
-	snakemake --snakefile ~/dev/EukDetect/rules/eukdetect.rules --configfile unknownEuksUnmodifiedEukdetect/conf.yaml  --cores 1 --rerun-incomplete runall
-	bash scripts/summarise_euk_results.sh unknownEuksUnmodifiedEukdetect/results/*filtered_hits_table.txt > unknownEuksUnmodifiedEukdetect/results-summary.tsv
-	bash scripts/summarise_euk_results.sh unknownEuksUnmodifiedEukdetect/results/filtering/*all_hits_table.txt > unknownEuksUnmodifiedEukdetect/results-summary-unfiltered.tsv
+	bash scripts/run_eukdetect_and_summarise.sh unknownEuksUnmodifiedEukdetect/conf.yaml 30 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary-unfiltered.tsv
 
 
 
@@ -145,6 +155,11 @@ figures/dropoutForFilters.png: unknownEuksBowtie2/results-summary-all.tsv
 	echo "Needs fixing!"
 	exit 1
 	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv unknownEuksBowtie2/results-summary-all.tsv --output-png figures/dropoutForFilters.png
+
+# was interesting once
+supplement/crossvalidation_results_joined_with_num_reads.tsv: refdbCrossValidation/nineTenth.fna.1.bt2 unknownEuksBowtie2/results-summary-all.tsv
+	join -11 -21 -t $$'\t' <( join -11 -21 -t $$'\t' <( cat refdbCrossValidation/busco_taxid_link.txt | perl -nE 'chomp; my ($$x, $$taxid) = split "\t"; my ($$s) = $$x =~ m{\w+-(.*)-\d+at2759.*}; next unless $$s; say join "\t", $$s, $$taxid' | sort -u ) <( grep -c '^>' refdbCrossValidation/oneTenthFolder/* | rev | cut -f 1 -d / | rev | tr : $$'\t' ) | cut -f 2,3 | perl -pE 'if($$.==1){say "taxid\tnum_reads"}'  | sort -r ) <(  perl -pE 'if($$.==1){s/^/taxid\t/}; s/\|/\t/;' unknownEuksBowtie2/results-summary-all.tsv | sort -r ) > supplement/crossvalidation_results_joined_with_num_reads.tsv
+
 
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
 	mkdir -pv supplement

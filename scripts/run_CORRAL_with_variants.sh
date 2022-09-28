@@ -21,11 +21,10 @@ runOne(){
     return
   fi
   rm -fv "$resultsTmp/cpms.tsv"
-  nextflow run wbazant/marker-alignments-nextflow -r main -w "$workDir" \
+  nextflow run wbazant/CORRAL -r main -w "$workDir" \
     --inputPath "$inputPath"  \
     --resultDir "$resultsTmp" \
     --downloadMethod local \
-    --unpackMethod bz2 \
     --libraryLayout paired \
     --refdb "$refdbPath" \
     --markerToTaxonPath "$markerToTaxonPath" \

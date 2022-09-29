@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+set -euo pipefail
+
 inputPath="$1"
 refdbPath="$2"
 markerToTaxonPath="$3"
@@ -20,17 +22,18 @@ runOne(){
   if [ -f "$outputPath" ]; then
     return
   fi
-  rm -fv "$resultsTmp/cpms.tsv"
+  rm -fv "$resultsTmp/cpm.matrix.tsv"
   nextflow run wbazant/CORRAL -r main -w "$workDir" \
     --inputPath "$inputPath"  \
     --resultDir "$resultsTmp" \
     --downloadMethod local \
     --libraryLayout paired \
+    --alignmentStatsCommand none \
     --refdb "$refdbPath" \
     --markerToTaxonPath "$markerToTaxonPath" \
     --bowtie2Command "$bowtie2Command" \
     --summarizeAlignmentsCommand "$summarizeAlignmentsCommand" \
-    -with-trace -resume && python -c 'import sys; import pandas; df = pandas.read_csv(sys.stdin, sep="\t", header = 0, index_col = 0); [print(index + "\t" + str(col.notnull().sum()) + "\t" + "\t".join(col[col.notnull()].keys())) for index, col in df.iteritems()]' < "$resultsTmp/cpms.tsv" > "$outputPath"
+    -with-trace -resume && python -c 'import sys; import pandas; df = pandas.read_csv(sys.stdin, sep="\t", header = 0, index_col = 0); [print(index + "\t" + str(col.notnull().sum()) + "\t" + "\t".join(col[col.notnull()].keys())) for index, col in df.iteritems()]' < "$resultsTmp/cpm.matrix.tsv" > "$outputPath"
 }
 
 runOne \

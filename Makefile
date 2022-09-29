@@ -9,9 +9,12 @@ refdb/ncbi_eukprot_met_arch_markers.fna:
 	perl -pe 's{Acartia_fossae,#N/A}{Acartia_fossae,1453877}; s{Calanus_sinicus,#N/A}{Calanus_sinicus,114070}' refdb/marker_genes_per_species.csv.orig > refdb/marker_genes_per_species.csv
 	dos2unix refdb/marker_genes_per_species.csv
 
+# does not actually install EukDetect :(
+# global installation is required
 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules:
 	wget https://github.com/allind/EukDetect/archive/ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30.zip
 	unzip ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30.zip
+
 
 refdbCrossValidation/nineTenth.fna.1.bt2: refdb/ncbi_eukprot_met_arch_markers.fna
 	mkdir -pv refdbCrossValidation
@@ -40,7 +43,8 @@ unknownEuks/conf.yaml: refdbCrossValidation/nineTenth.fna.1.bt2
 	bash scripts/wgsim_one_tenth.sh refdbCrossValidation/oneTenthFolder refdbCrossValidation nineTenth.fna unknownEuks/input unknownEuks/conf.yaml unknownEuks/results
 
 unknownEuks/results-summary.tsv: unknownEuks/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
-	bash scripts/run_eukdetect_and_summarise.sh unknownEuks/conf.yaml 5 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules unknownEuks/results-summary.tsv unknownEuks/results-summary-unfiltered.tsv
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules unknownEuks/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh unknownEuks/conf.yaml 5 unknownEuks/eukdetect.rules unknownEuks/results-summary.tsv unknownEuks/results-summary-unfiltered.tsv
 
 lowAbundanceEuks/conf.yaml: unknownEuks/conf.yaml
 	mkdir -pv lowAbundanceEuks
@@ -49,14 +53,15 @@ lowAbundanceEuks/conf.yaml: unknownEuks/conf.yaml
 	bash scripts/min_abundance_reads.sh unknownEuks/input refdb ncbi_eukprot_met_arch_markers.fna lowAbundanceEuks/input lowAbundanceEuks/conf.yaml lowAbundanceEuks/results
 
 lowAbundanceEuks/results-summary.tsv: lowAbundanceEuks/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
-	bash scripts/run_eukdetect_and_summarise.sh lowAbundanceEuks/conf.yaml 30 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules lowAbundanceEuks/results-summary.tsv lowAbundanceEuks/results-summary-unfiltered.tsv
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules lowAbundanceEuks/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh lowAbundanceEuks/conf.yaml 30 lowAbundanceEuks/eukdetect.rules lowAbundanceEuks/results-summary.tsv lowAbundanceEuks/results-summary-unfiltered.tsv
 
 lowAbundanceEuksBowtie2/results/our-method.results-summary.tsv: lowAbundanceEuks/conf.yaml
 	mkdir -pv lowAbundanceEuksBowtie2
 	mkdir -pv lowAbundanceEuksBowtie2/results.tmp
 	mkdir -pv lowAbundanceEuksBowtie2/results
 	ls `pwd`/lowAbundanceEuks/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > lowAbundanceEuksBowtie2/in.tsv
-	bash scripts/run_CORRAL_with_variants.sh `pwd`/lowAbundanceEuksBowtie2/in.tsv `pwd`/refdbCrossValidation/nineTenth.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/lowAbundanceEuksBowtie2/work `pwd`/lowAbundanceEuksBowtie2/results.tmp `pwd`/lowAbundanceEuksBowtie2/results
+	bash scripts/run_CORRAL_with_variants.sh `pwd`/lowAbundanceEuksBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/lowAbundanceEuksBowtie2/work `pwd`/lowAbundanceEuksBowtie2/results.tmp `pwd`/lowAbundanceEuksBowtie2/results
 
 unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 	mkdir -pv unknownEuksBowtie2
@@ -68,18 +73,21 @@ unknownEuksBowtie2/results/our-method.results-summary.tsv: unknownEuks/conf.yaml
 unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv: unknownEuksBowtie2/results/our-method.results-summary.tsv
 	perl -nE 'chomp; my ($$id, $$num, @xs) = split ("\t", $$_, -1); @xs = grep {$$_} @xs; die "$$num bad: $$_" unless $$num == @xs; @ys = grep {$$_ !~/^\?/ } @xs ;say join "\t", $$id, scalar @ys, @ys' unknownEuksBowtie2/results/our-method.results-summary.tsv > unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
 
+lowAbundanceEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv: lowAbundanceEuksBowtie2/results/our-method.results-summary.tsv
+	perl -nE 'chomp; my ($$id, $$num, @xs) = split ("\t", $$_, -1); @xs = grep {$$_} @xs; die "$$num bad: $$_" unless $$num == @xs; @ys = grep {$$_ !~/^\?/ } @xs ;say join "\t", $$id, scalar @ys, @ys' lowAbundanceEuksBowtie2/results/our-method.results-summary.tsv > lowAbundanceEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
 
 unknownEuksUnmodifiedEukdetect/results-summary.tsv: unknownEuks/results-summary.tsv EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
 	mkdir -pv unknownEuksUnmodifiedEukdetect
 	(cd unknownEuksUnmodifiedEukdetect && rm -rf input && ln -sv ../unknownEuks/input input)
 	mkdir -pv unknownEuksUnmodifiedEukdetect/results
 	perl -pe 's/unknownEuks/unknownEuksUnmodifiedEukdetect/g' unknownEuks/conf.yaml > unknownEuksUnmodifiedEukdetect/conf.yaml
-	bash scripts/run_eukdetect_and_summarise.sh unknownEuksUnmodifiedEukdetect/conf.yaml 30 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary-unfiltered.tsv
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules unknownEuksUnmodifiedEukdetect/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh unknownEuksUnmodifiedEukdetect/conf.yaml 30 unknownEuksUnmodifiedEukdetect/eukdetect.rules unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary-unfiltered.tsv
 
 
 
 unknownEuksBowtie2/results-summary-all.tsv: refdbCrossValidation/goodMatches.tsv unknownEuks/results-summary.tsv unknownEuksBowtie2/results/our-method.results-summary.tsv unknownEuksUnmodifiedEukdetect/results-summary.tsv unknownEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv
-	python3 scripts/parse_whole_samples_results.py \
+	python3 scripts/parse_results_for_simulated_unknown_species_samples.py \
 		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
 		--refdb-ncbi refdb/taxa.sqlite \
 		--good-matches-path refdbCrossValidation/goodMatches.tsv \
@@ -100,6 +108,34 @@ unknownEuksBowtie2/results-summary-all.tsv: refdbCrossValidation/goodMatches.tsv
 		--output-tsv unknownEuksBowtie2/results-summary-all.tsv \
 		--output-xlsx supplement/wgsimWholeSamplesOneTenthCoverage.xlsx
 
+lowAbundanceEuksModifiedEukdetect/results-summary.tsv: lowAbundanceEuks/results-summary.tsv EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	mkdir -pv lowAbundanceEuksModifiedEukdetect
+	(cd lowAbundanceEuksModifiedEukdetect && rm -rf input && ln -sv ../lowAbundanceEuks/input input)
+	mkdir -pv lowAbundanceEuksModifiedEukdetect/results
+	perl -pe 's/lowAbundanceEuks/lowAbundanceEuksModifiedEukdetect/g' lowAbundanceEuks/conf.yaml > lowAbundanceEuksModifiedEukdetect/conf.yaml
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules lowAbundanceEuksModifiedEukdetect/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh lowAbundanceEuksModifiedEukdetect/conf.yaml 5 lowAbundanceEuksModifiedEukdetect/eukdetect.rules lowAbundanceEuksModifiedEukdetect/results-summary.tsv lowAbundanceEuksModifiedEukdetect/results-summary-unfiltered.tsv
+
+lowAbundanceEuksBowtie2/results-summary-all.tsv: lowAbundanceEuks/results-summary.tsv lowAbundanceEuksBowtie2/results/our-method.results-summary.tsv lowAbundanceEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv lowAbundanceEuksModifiedEukdetect/results-summary.tsv
+	python3 scripts/parse_results_for_simulated_samples.py \
+		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
+		--refdb-ncbi refdb/taxa.sqlite \
+		--input "No filter:lowAbundanceEuksBowtie2/results/no-filter.results-summary.tsv" \
+		--input "Two markers:lowAbundanceEuksBowtie2/results/m2.results-summary.tsv" \
+		--input "MAPQ >=30:lowAbundanceEuksBowtie2/results/M30.results-summary.tsv" \
+		--input "Four reads:lowAbundanceEuksBowtie2/results/r4.results-summary.tsv" \
+		--input "Two markers, MAPQ>=30:lowAbundanceEuksBowtie2/results/m2M30.results-summary.tsv" \
+		--input "Two markers, four reads:lowAbundanceEuksBowtie2/results/m2r4.results-summary.tsv" \
+		--input "Four reads, MAPQ>=30:lowAbundanceEuksBowtie2/results/r4M30.results-summary.tsv" \
+		--input "Two markers, four reads, MAPQ>=30:lowAbundanceEuksBowtie2/results/m2r4M30.results-summary.tsv" \
+		--input "EukDetect (MAPQ>=30):lowAbundanceEuks/results-summary.tsv" \
+		--input "EukDetect sensitive (MAPQ>=30):lowAbundanceEuks/results-summary-unfiltered.tsv" \
+		--input "EukDetect (MAPQ>=5):lowAbundanceEuksModifiedEukdetect/results-summary.tsv" \
+		--input "EukDetect sensitive (MAPQ>=5):lowAbundanceEuksModifiedEukdetect/results-summary-unfiltered.tsv" \
+		--input "CORRAL (all hits):lowAbundanceEuksBowtie2/results/our-method.results-summary.tsv" \
+		--input "CORRAL (unambiguous hits only):lowAbundanceEuksBowtie2/results/our-method-unambiguous-only.results-summary.tsv" \
+		--output-tsv lowAbundanceEuksBowtie2/results-summary-all.tsv \
+		--output-xlsx supplement/wgsimWholeSamplesLowAbundance.xlsx
 
 tmp:
 	mkdir -pv tmp
@@ -198,7 +234,7 @@ supplement/microbiomedb.xlsx: ./microbiomedb_results/BONUS.eukdetect.lineage_abu
 		--output-xlsx supplement/microbiomedb.xlsx
 
 
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx
+paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx lowAbundanceEuksBowtie2/results-summary-all.tsv
 	perl -pe 's/≥/\$$\\geq\$$/g; s/μ/\$$\\mu\$$/g; s/≤/\$$\\leq\$$/g' paper.md >  out.md
 	pandoc -s --bibliography biblio.bib  --citeproc --csl bmc-bioinformatics.csl -f markdown out.md  --pdf-engine=xelatex -o paper.pdf
 	perl -pe 's/≥/>=/g; s/μ/M/g; s/≤/<=/g; s/for .*?lust.*?ignments/for Clustering Of Related Reference ALignments/g' paper.md >  out.md

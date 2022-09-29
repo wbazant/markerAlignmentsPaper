@@ -1,57 +1,14 @@
 import sys
-import re
 import os
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), "../"))
 from lib.ncbi2 import NCBITaxa2
+from lib.utils import read_scrambled_name_to_taxid_from_marker_to_taxon
 import argparse
 import pysam
 import re
-import json
-import statistics
-import logging
-import subprocess
-import sqlite3
 import pandas
 
 from scipy.stats.mstats import hmean
-
-from marker_alignments.store import SqliteStore
-
-from pathlib import Path
-
-def read_marker_to_taxon(path):
-    result = {}
-    with open(path, 'r') as f:
-        for line in f:
-            (marker, taxon) = line.rstrip().split("\t")
-            result[marker] = taxon
-    return result
-
-# removed $ from the end compared to marker_alignments version
-#other_MGCollapse_EPSP3-12_382_886_0:0:0_0:0:0_0
-eukprot_refdb_regex_taxon = "^[a-z]+-(.*_[a-z-]+(?:_.*)?)-[0-9]+[ab]t2759-[A-Z]\d|^[a-z]+-(.*)...Collapse_[^_]*|^()other_MGCollapse_[^_]*"
-pattern_taxon = re.compile(eukprot_refdb_regex_taxon)
-
-def next_g(search):
-    return next(g for g in search.groups() if g is not None)
-
-
-def read_scrambled_name_to_taxid_from_marker_to_taxon(path):
-    result = {}
-    with open(path, 'r') as f:
-        for line in f:
-            if line.find("Collapse") > -1:
-                continue
-            (marker, taxon_str) = line.rstrip().split("\t")
-            taxon = int(taxon_str)
-            search = pattern_taxon.search(marker)
-            scrambled_name = next_g(search)
-            if scrambled_name in result and result[scrambled_name] != taxon:
-                raise ValueError(line, taxon, result[scrambled_name])
-            result[scrambled_name] = taxon
-
-    return result
-
 
 def ct(n, rank, all_good, some_good):
     result = []
@@ -169,10 +126,6 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_fi
     good_matches = read_good_matches(good_matches_path)
 
     ncbi = NCBITaxa2(refdb_ncbi)
-    lines = []
-    lines.append("# Summary: ")
-    lines.append("# | Name | " + " | ".join(header) + " |")
-    lines.append("# | -- | " + " | ".join(["--" for h in header]) + " |")
 
     all_results = {}
     input_names = []
@@ -190,8 +143,6 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_fi
 
     all_taxids = set([x for xx in all_results.values() for x in xx ])
     taxid_to_name = ncbi.get_taxid_translator(all_taxids)
-
-#    return (input_names, all_results, all_taxids, taxid_to_name)
 
     columns_detailed = ["species"] + input_names
     data_detailed = [[str(taxid) + "|" + taxid_to_name[taxid]] + [sc(all_results, input_name, taxid) for input_name in input_names] for taxid in sorted(all_taxids)]

@@ -9,8 +9,6 @@ refdb/ncbi_eukprot_met_arch_markers.fna:
 	perl -pe 's{Acartia_fossae,#N/A}{Acartia_fossae,1453877}; s{Calanus_sinicus,#N/A}{Calanus_sinicus,114070}' refdb/marker_genes_per_species.csv.orig > refdb/marker_genes_per_species.csv
 	dos2unix refdb/marker_genes_per_species.csv
 
-# does not actually install EukDetect :(
-# global installation is required
 EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules:
 	wget https://github.com/allind/EukDetect/archive/ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30.zip
 	unzip ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30.zip
@@ -165,6 +163,29 @@ pairs/confusable_pairs.tsv: tmp/wgsimMutationRate.json refdb/ncbi_eukprot_met_ar
 	mkdir -pv pairs
 	python3 scripts/pick_pairs.py --refdb-ncbi refdb/taxa.sqlite --refdb-markers  refdb/marker_genes_per_species.csv --input-sqlite tmp/100.0.0.0.0.alignments.sqlite --subsample-pca-distance 0.05 --verbose --output-tsv pairs/confusable_pairs.tsv
 
+pairs/conf.yaml: pairs/confusable_pairs.tsv
+	mkdir -pv pairs/tmpsim
+	mkdir -pv pairs/input
+	bash scripts/make_pairs.sh refdb pairs/confusable_pairs.tsv pairs/tmpsim pairs/input pairs/conf.yaml pairs/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna
+
+pairs/eukdetect-results-summary.tsv: pairs/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules pairs/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh pairs/conf.yaml 30 pairs/eukdetect.rules pairs/eukdetect-results-summary.tsv pairs/eukdetect-results-summary-unfiltered.tsv
+
+pairsBowtie2/results/our-method.results-summary.tsv: pairs/conf.yaml
+	mkdir -pv pairsBowtie2
+	mkdir -pv pairsBowtie2/results.tmp
+	mkdir -pv pairsBowtie2/results
+	ls `pwd`/pairs/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsBowtie2/in.tsv
+	bash scripts/run_CORRAL.sh `pwd`/pairsBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsBowtie2/work `pwd`/pairsBowtie2/results.tmp `pwd`/pairsBowtie2/results
+
+pairs/results-summary-all.tsv: pairs/eukdetect-results-summary.tsv pairsBowtie2/results/our-method.results-summary.tsv
+	python3 scripts/parse_results_for_simulated_pairs.py \
+		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
+		--refdb-ncbi refdb/taxa.sqlite \
+		--input "EukDetect:pairs/eukdetect-results-summary.tsv" \
+		--input "CORRAL:pairsBowtie2/results/our-method.results-summary.tsv" \
+		--output-tsv "pairs/results-summary-all.tsv"
 
 figures/wgsimMutationRate.png: tmp/wgsimMutationRate.json
 	mkdir -pv figures

@@ -88,7 +88,8 @@ def get_df(sqlite_path):
     df['rate_accept_other_matches_b'] = (df['num_matched_reads_total_b'] - df['num_self_matches_b'] - df['num_reads_a_to_b']) / df['num_matched_reads_total_b']
 
     df = df[['taxon_a', 'taxon_b', 'rate_emit_cross_matches_a', 'rate_emit_other_matches_a','rate_accept_cross_matches_a', 'rate_accept_other_matches_a', 'rate_emit_cross_matches_b', 'rate_emit_other_matches_b', 'rate_accept_cross_matches_b', 'rate_accept_other_matches_b']]
-    return df.set_index(['taxon_a', 'taxon_b'])
+    return df
+
     
 def pca_components(df, logger):
     pca = PCA(n_components=2)
@@ -116,12 +117,21 @@ def pick_subsample(df, DISTANCE_MIN):
             list_ok.append((x,y))
     return names_ok
 
-def do(refdb_ncbi, sqlite_path, subsample_distance, output_tsv, logger):
+def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, output_tsv, logger):
     df = get_df(sqlite_path)
+    df = df.set_index(['taxon_a', 'taxon_b'])
     data_columns = df.columns.to_list()
     logger.debug("Num data points: %s", len(df))
     df[["pca_1", "pca_2"]] = pca_components(df, logger)
-    subsample = pick_subsample(df, DISTANCE_MIN = subsample_distance) 
+
+    df = df.reset_index()
+    x = set(pandas.read_csv(refdb_markers)['Taxonomy_ID'])
+    df['is_both_species'] = df.apply(lambda r: int(r['taxon_a']) in x and int(r['taxon_b']) in x, axis = 1)
+    df = df.set_index(['taxon_a', 'taxon_b'])
+
+    logger.debug("Num data points where both taxa are species level: %s", len(df[df['is_both_species']]))
+
+    subsample = pick_subsample(df[df['is_both_species']], DISTANCE_MIN = subsample_distance) 
     logger.debug("Num subsampled points: %s", len(subsample))
     df["is_picked"] =  df.index.map(lambda n: n in subsample)
     df = df.reset_index()
@@ -131,7 +141,7 @@ def do(refdb_ncbi, sqlite_path, subsample_distance, output_tsv, logger):
     df["taxon_b_name"] = df["taxon_b"].map(lambda x: t[int(x)])
 
     df = df.sort_values(by="pca_1", ascending = False)
-    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked"] + ["pca_1", "pca_2"] + data_columns ]
+    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked", "is_both_species"] + ["pca_1", "pca_2"] + data_columns ]
     df.to_csv(output_tsv, index = False, sep = "\t", float_format='%.3f')
 
 
@@ -142,6 +152,7 @@ def opts(argv):
       formatter_class = argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa", required = True)
+    parser.add_argument("--refdb-markers", type=str, action="store", dest="refdb_markers", help = "marker genes per species csv", required = True)
     parser.add_argument("--input-sqlite", type=str, action="store", dest="sqlite_path", required=True)
     parser.add_argument("--subsample-pca-distance", type=float, action = "store", dest="subsample_distance", default = 0.05)
     parser.add_argument("--verbose", action="store_true", dest="verbose")

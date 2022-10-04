@@ -161,9 +161,9 @@ tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json: tmpLeaveOneOut refdbCrossValid
 tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 	python3 scripts/sqlite_to_precision_by_species_tsv.py --input-alignments-sqlite tmpLeaveOneOut/100.0.0.0.0.alignments.sqlite --refdb-ncbi refdb/taxa.sqlite --aggregation-level genus --output-tsv tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv
 
-pairs/confusable_pairs.tsv: tmp/wgsimMutationRate.json
+pairs/confusable_pairs.tsv: tmp/wgsimMutationRate.json refdb/ncbi_eukprot_met_arch_markers.fna
 	mkdir -pv pairs
-	python3 scripts/pick_pairs.py --refdb-ncbi refdb/taxa.sqlite --input-sqlite tmp/100.0.0.0.0.alignments.sqlite --subsample-pca-distance 0.05 --verbose --output-tsv pairs/confusable_pairs.tsv
+	python3 scripts/pick_pairs.py --refdb-ncbi refdb/taxa.sqlite --refdb-markers  refdb/marker_genes_per_species.csv --input-sqlite tmp/100.0.0.0.0.alignments.sqlite --subsample-pca-distance 0.05 --verbose --output-tsv pairs/confusable_pairs.tsv
 
 
 figures/wgsimMutationRate.png: tmp/wgsimMutationRate.json

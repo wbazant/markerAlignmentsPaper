@@ -1,10 +1,15 @@
 import pandas
 import sqlite3
 from sklearn.decomposition import PCA
+from scipy.spatial.distance import euclidean
+from ete3 import NCBITaxa
+import sys
+import argparse
+import logging
 
 sql = '''
-SELECT pairs.source_taxon          AS taxon_a,
-       pairs.matched_taxon         AS taxon_b,
+SELECT pairs.taxon_a,
+       pairs.taxon_b,
        sources_a.num_source_reads  AS num_source_reads_total_a,
        self_a.num_self_matches     AS num_self_matches_a,
        matches_a.num_matched_reads AS num_matched_reads_total_a,
@@ -12,87 +17,148 @@ SELECT pairs.source_taxon          AS taxon_a,
        sources_b.num_source_reads  AS num_source_reads_total_b,
        self_b.num_self_matches     AS num_self_matches_b,
        matches_b.num_matched_reads AS num_matched_reads_total_b,
-       pairs_inv.num_pairs         AS num_reads_b_to_a
-FROM   (SELECT source_taxon,
-               Count(*) AS num_source_reads
-        FROM   alignment_from_known_source
-        GROUP  BY source_taxon) sources_a,
-       (SELECT source_taxon,
-               Count(*) AS num_source_reads
-        FROM   alignment_from_known_source
-        GROUP  BY source_taxon) sources_b,
-       (SELECT matched_taxon,
-               Count(*) AS num_matched_reads
-        FROM   alignment_from_known_source
-        GROUP  BY matched_taxon) matches_a,
-       (SELECT matched_taxon,
-               Count(*) AS num_matched_reads
-        FROM   alignment_from_known_source
-        GROUP  BY matched_taxon) matches_b,
-       (SELECT source_taxon,
-               matched_taxon,
+       ifnull(pairs_inv.num_pairs, 0)         AS num_reads_b_to_a
+FROM   
+       (SELECT source_taxon as taxon_a,
+               matched_taxon as taxon_b,
                Count(*) AS num_pairs
         FROM   alignment_from_known_source
-        WHERE  source_taxon < matched_taxon
+        WHERE  source_taxon != matched_taxon
         GROUP  BY source_taxon,
-                  matched_taxon) pairs,
-       (SELECT source_taxon,
-               matched_taxon,
-               Count(*) AS num_pairs
+                  matched_taxon) pairs
+join
+       (SELECT source_taxon as taxon,
+               Count(*) AS num_source_reads
         FROM   alignment_from_known_source
-        WHERE  source_taxon > matched_taxon
-        GROUP  BY source_taxon,
-                  matched_taxon) pairs_inv,
-       (SELECT source_taxon,
+        GROUP  BY source_taxon) sources_a
+  on pairs.taxon_a = sources_a.taxon        
+join
+       (SELECT source_taxon as taxon,
+               Count(*) AS num_source_reads
+        FROM   alignment_from_known_source
+        GROUP  BY source_taxon) sources_b
+  on pairs.taxon_b = sources_b.taxon
+join
+       (SELECT matched_taxon as taxon,
+               Count(*) AS num_matched_reads
+        FROM   alignment_from_known_source
+        GROUP  BY matched_taxon) matches_a
+  on pairs.taxon_a = matches_a.taxon
+join
+       (SELECT matched_taxon as taxon,
+               Count(*) AS num_matched_reads
+        FROM   alignment_from_known_source
+        GROUP  BY matched_taxon) matches_b
+  on pairs.taxon_b = matches_b.taxon
+join
+       (SELECT source_taxon as taxon,
                Count(*) AS num_self_matches
         FROM   alignment_from_known_source
         WHERE  source_taxon = matched_taxon
-        GROUP  BY source_taxon) self_a,
-       (SELECT source_taxon,
+        GROUP  BY source_taxon) self_a
+  on pairs.taxon_a = self_a.taxon       
+join
+       (SELECT source_taxon as taxon,
                Count(*) AS num_self_matches
         FROM   alignment_from_known_source
         WHERE  source_taxon = matched_taxon
         GROUP  BY source_taxon) self_b
-WHERE  sources_a.source_taxon = pairs.source_taxon
-       AND matches_a.matched_taxon = pairs.source_taxon
-       AND sources_b.source_taxon = pairs.matched_taxon
-       AND matches_b.matched_taxon = pairs.matched_taxon
-       AND pairs.source_taxon = pairs_inv.matched_taxon
-       AND pairs.matched_taxon = pairs_inv.source_taxon
-       AND pairs.source_taxon = self_a.source_taxon
-       AND pairs.matched_taxon = self_b.source_taxon 
-
+  on pairs.taxon_b = self_b.taxon
+left join
+       (SELECT source_taxon as taxon_a,
+               matched_taxon as taxon_b,
+               Count(*) AS num_pairs
+        FROM   alignment_from_known_source
+        WHERE  source_taxon != matched_taxon
+        GROUP  BY source_taxon,
+                  matched_taxon) pairs_inv
+on (pairs.taxon_a = pairs_inv.taxon_b and pairs.taxon_b = pairs_inv.taxon_a)
 '''
 
-df = pandas.read_sql_query(sql, sqlite3.connect('tmp/100.0.0.0.0.alignments.sqlite'));
+sqlite_path = 'tmp/100.0.0.0.0.alignments.sqlite'
+def get_df(sqlite_path):
+    df = pandas.read_sql_query(sql, sqlite3.connect(sqlite_path));
+    df['rate_emit_cross_matches_a'] = df['num_reads_a_to_b'] / df['num_source_reads_total_a']
+    df['rate_emit_other_matches_a'] = (df['num_source_reads_total_a']  - df['num_self_matches_a'] - df['num_reads_a_to_b'] )  / df['num_source_reads_total_a']
+    df['rate_accept_cross_matches_a'] = df['num_reads_b_to_a'] / df['num_matched_reads_total_a']
+    df['rate_accept_other_matches_a'] = (df['num_matched_reads_total_a'] - df['num_self_matches_a'] - df['num_reads_b_to_a']) / df['num_matched_reads_total_a']
+    df['rate_emit_cross_matches_b'] = df['num_reads_b_to_a'] / df['num_source_reads_total_b']
+    df['rate_emit_other_matches_b'] = (df['num_source_reads_total_b']  - df['num_self_matches_b'] - df['num_reads_b_to_a'] )  / df['num_source_reads_total_b']
+    df['rate_accept_cross_matches_b'] = df['num_reads_a_to_b'] / df['num_matched_reads_total_b']
+    df['rate_accept_other_matches_b'] = (df['num_matched_reads_total_b'] - df['num_self_matches_b'] - df['num_reads_a_to_b']) / df['num_matched_reads_total_b']
 
-df['rate_emit_cross_matches_a'] = df['num_reads_a_to_b'] / df['num_source_reads_total_a']
-df['rate_emit_other_matches_a'] = (df['num_source_reads_total_a']  - df['num_self_matches_a'] - df['num_reads_a_to_b'] )  / df['num_source_reads_total_a']
-df['rate_accept_cross_matches_a'] = df['num_reads_b_to_a'] / df['num_matched_reads_total_a']
-df['rate_accept_other_matches_a'] = (df['num_matched_reads_total_a'] - df['num_self_matches_a'] - df['num_reads_b_to_a']) / df['num_matched_reads_total_a']
-df['rate_emit_cross_matches_b'] = df['num_reads_b_to_a'] / df['num_source_reads_total_b']
-df['rate_emit_other_matches_b'] = (df['num_source_reads_total_b']  - df['num_self_matches_b'] - df['num_reads_b_to_a'] )  / df['num_source_reads_total_b']
-df['rate_accept_cross_matches_b'] = df['num_reads_a_to_b'] / df['num_matched_reads_total_b']
-df['rate_accept_other_matches_b'] = (df['num_matched_reads_total_b'] - df['num_self_matches_b'] - df['num_reads_a_to_b']) / df['num_matched_reads_total_b']
+    df = df[['taxon_a', 'taxon_b', 'rate_emit_cross_matches_a', 'rate_emit_other_matches_a','rate_accept_cross_matches_a', 'rate_accept_other_matches_a', 'rate_emit_cross_matches_b', 'rate_emit_other_matches_b', 'rate_accept_cross_matches_b', 'rate_accept_other_matches_b']]
+    return df.set_index(['taxon_a', 'taxon_b'])
+    
+def pca_components(df, logger):
+    pca = PCA(n_components=2)
+    logger.debug("Fitting PCA")
+    pca.fit(df)
+    logger.debug("Done. Explained variance: %s", pca.explained_variance_ratio_)
+    return pca.transform(df)
 
-df = df[['taxon_a', 'taxon_b', 'rate_emit_cross_matches_a', 'rate_emit_other_matches_a','rate_accept_cross_matches_a', 'rate_accept_other_matches_a', 'rate_emit_cross_matches_b', 'rate_emit_other_matches_b', 'rate_accept_cross_matches_b', 'rate_accept_other_matches_b']]
-df = df.set_index(['taxon_a', 'taxon_b'])
+def pick_subsample(df, DISTANCE_MIN):
+    # E. dispar, E. hystolytica
+    eukdetect_paper_example = ("370354", "294381")
 
-pca = PCA(n_components=2)
-pca.fit(df)
+    eukdetect_x,eukdetect_y = df.loc[eukdetect_paper_example][["pca_1", "pca_2"]]
+
+    # https://gis.stackexchange.com/questions/436908/selecting-n-samples-uniformly-from-a-grid-points
+    names_ok = [eukdetect_paper_example]
+    list_ok = [(eukdetect_x,eukdetect_y)]
+
+    for index, row in df.iterrows():
+        x,y = row[["pca_1", "pca_2"]]
+        if any((euclidean((x,y), point_ok) < DISTANCE_MIN for point_ok in list_ok)):
+            continue
+        else:
+            names_ok.append(index)
+            list_ok.append((x,y))
+    return names_ok
+
+def do(refdb_ncbi, sqlite_path, subsample_distance, output_tsv, logger):
+    df = get_df(sqlite_path)
+    data_columns = df.columns.to_list()
+    logger.debug("Num data points: %s", len(df))
+    df[["pca_1", "pca_2"]] = pca_components(df, logger)
+    subsample = pick_subsample(df, DISTANCE_MIN = subsample_distance) 
+    logger.debug("Num subsampled points: %s", len(subsample))
+    df["is_picked"] =  df.index.map(lambda n: n in subsample)
+    df = df.reset_index()
+    ncbi = NCBITaxa(refdb_ncbi)
+    t = ncbi.get_taxid_translator(set(df["taxon_a"].values) | set(df["taxon_b"].values))
+    df["taxon_a_name"] = df["taxon_a"].map(lambda x: t[int(x)])
+    df["taxon_b_name"] = df["taxon_b"].map(lambda x: t[int(x)])
+
+    df = df.sort_values(by="pca_1", ascending = False)
+    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked"] + ["pca_1", "pca_2"] + data_columns ]
+    df.to_csv(output_tsv, index = False, sep = "\t", float_format='%.3f')
 
 
-# first component: how much a and b accept other matches
-# second component: how confusable a and b are with each other
-"""
->>> pca.explained_variance_ratio_.tolist()
-[0.6285058653211216, 0.1808318437373069]
->>> [x for x in zip(df.columns, pca.components_[0] )]
-[('rate_emit_cross_matches_a', 0.009032944786850607), ('rate_emit_other_matches_a', 0.5083683425430616), ('rate_accept_cross_matches_a', 0.012117526198515582), ('rate_accept_other_matches_a', 0.5180661055012918), ('rate_emit_cross_matches_b', 0.008617479581191023), ('rate_emit_other_matches_b', 0.48132271985088476), ('rate_accept_cross_matches_b', 0.005649506383429148), ('rate_accept_other_matches_b', 0.49108346701623734)]
->>> [x for x in zip(df.columns, pca.components_[1] )]
-[('rate_emit_cross_matches_a', 0.5157742464118173), ('rate_emit_other_matches_a', 0.06198509331246638), ('rate_accept_cross_matches_a', 0.5146651863043344), ('rate_accept_other_matches_a', 0.0773771132609782), ('rate_emit_cross_matches_b', 0.46972839845403724), ('rate_emit_other_matches_b', -0.09512043486213578), ('rate_accept_cross_matches_b', 0.4709117796519074), ('rate_accept_other_matches_b', -0.08841229347553647)]
-"""
 
-df[["pca_1", "pca_2"]] =  pca.transform(df)
+def opts(argv):
+    parser = argparse.ArgumentParser(
+      description="make diabimmune comparison spreadsheet",
+      formatter_class = argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa", required = True)
+    parser.add_argument("--input-sqlite", type=str, action="store", dest="sqlite_path", required=True)
+    parser.add_argument("--subsample-pca-distance", type=float, action = "store", dest="subsample_distance", default = 0.05)
+    parser.add_argument("--verbose", action="store_true", dest="verbose")
+    parser.add_argument("--output-tsv", type=str, action="store", dest="output_tsv", required=True)
+    return parser.parse_args(argv)
 
-# 
+def main(argv=sys.argv[1:]):
+    options = opts(argv)
+    logging.basicConfig(format='%(asctime)s: %(message)s')
+    logger=logging.getLogger(__name__)
+    if options.verbose:
+        logger.setLevel(logging.DEBUG)
+    kwargs = vars(options)
+    del kwargs['verbose']
+    do(**kwargs, logger = logger)
+
+if __name__ == '__main__':
+    main()
+
+

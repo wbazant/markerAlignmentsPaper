@@ -12,14 +12,15 @@ from lib.ncbi2 import NCBITaxa2
 from lib.utils import read_scrambled_name_to_taxid_from_marker_to_taxon
 
 header_data = [
-  ('No results', 'NR'),
   ('has A, has B, has others', 'ABO'),
   ('has A, has B, no others', 'ABo'),
   ('has A, misses B, has others', 'AbO'),
   ('has A, misses B, no others', 'Abo'),
   ('misses A, has B, has others', 'aBO'),
   ('misses A, has B, no others', 'aBo'),
-  ('misses A, has B, no others', 'aBO'),
+  ('misses A, has B, has others', 'aBO'),
+  ('misses A, misses B, has others', 'abO'),
+  ('No results', 'NR'),
 ]
 
 header_shortcuts = dict(header_data)

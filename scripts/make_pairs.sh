@@ -10,9 +10,10 @@ outputConf="$5"
 outputResults="$6"
 eukdetectDir="$7"
 refdbPrefix="$8"
+coverage="$9"
 
-if ! ( [ "$refdbDir" -a "$confusablePairsTsv" -a "$intermediateSimDir"  -a "$simPath" -a "$outputConf" -a "$outputResults" -a "$eukdetectDir" -a "$refdbPrefix" ] ) ; then
-  echo "Usage: $0 refdbDir confusablePairsTsv intermediateSimDir simPath outputConf outputResults eukdetectDir refdbPrefix"
+if ! ( [ "$refdbDir" -a "$confusablePairsTsv" -a "$intermediateSimDir"  -a "$simPath" -a "$outputConf" -a "$outputResults" -a "$eukdetectDir" -a "$refdbPrefix" -a "$coverage" ] ) ; then
+  echo "Usage: $0 refdbDir confusablePairsTsv intermediateSimDir simPath outputConf outputResults eukdetectDir refdbPrefix coverage"
   exit 1
 fi
 
@@ -82,8 +83,8 @@ perl -nE 'if($. ==1) {next}; my ($taxonA, $na, $taxonB, $nb, $ip)  = split "\t";
   sourceB="$intermediateSimDir/singles/${taxonB}.fa"
 
   # num reads is number of letters divided by read length (100) multiplied by desired coverage (0.1)
-  numReadsA=$(grep -v '>' $sourceA | perl -pe chomp | wc -c | perl -nE 'chomp; say sprintf("%d", $_ / 1000)' )
-  numReadsB=$(grep -v '>' $sourceB | perl -pe chomp | wc -c | perl -nE 'chomp; say sprintf("%d", $_ / 1000)' )
+  numReadsA=$(grep -v '>' $sourceA | perl -pe chomp | wc -c | CVG=$coverage perl -nE 'chomp; say sprintf("%d", ($_ / 100) * $ENV{CVG})' )
+  numReadsB=$(grep -v '>' $sourceB | perl -pe chomp | wc -c | CVG=$coverage perl -nE 'chomp; say sprintf("%d", ($_ / 100) * $ENV{CVG})' )
   if [ $numReadsA -gt 0 -a $numReadsB -gt 0 ] ; then
     echo "  $sample:" >> $outputConf
     wgsim -S 1337 -1100 -2100 -e 0.0 -r 0.0 -N $numReadsA $sourceA $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpA.2.fq

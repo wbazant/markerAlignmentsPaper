@@ -166,7 +166,7 @@ pairs/confusable_pairs.tsv: tmp/wgsimMutationRate.json refdb/ncbi_eukprot_met_ar
 pairs/conf.yaml: pairs/confusable_pairs.tsv
 	mkdir -pv pairs/tmpsim
 	mkdir -pv pairs/input
-	bash scripts/make_pairs.sh refdb pairs/confusable_pairs.tsv pairs/tmpsim pairs/input pairs/conf.yaml pairs/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna
+	bash scripts/make_pairs.sh refdb pairs/confusable_pairs.tsv pairs/tmpsim pairs/input pairs/conf.yaml pairs/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna 0.1
 
 pairs/eukdetect-results-summary.tsv: pairs/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
 	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules pairs/eukdetect.rules
@@ -179,12 +179,32 @@ pairsBowtie2/results/our-method.results-summary.tsv: pairs/conf.yaml
 	ls `pwd`/pairs/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsBowtie2/in.tsv
 	bash scripts/run_CORRAL.sh `pwd`/pairsBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsBowtie2/work `pwd`/pairsBowtie2/results.tmp `pwd`/pairsBowtie2/results
 
-pairs/results-summary-all.tsv: pairs/eukdetect-results-summary.tsv pairsBowtie2/results/our-method.results-summary.tsv
+pairsLo/conf.yaml: pairs/confusable_pairs.tsv
+	mkdir -pv pairsLo/tmpsim
+	mkdir -pv pairsLo/input
+	bash scripts/make_pairs.sh refdb pairs/confusable_pairs.tsv pairsLo/tmpsim pairsLo/input pairsLo/conf.yaml pairsLo/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna 0.01
+
+pairsLo/eukdetect-results-summary.tsv: pairsLo/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules pairsLo/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh pairsLo/conf.yaml 30 pairsLo/eukdetect.rules pairsLo/eukdetect-results-summary.tsv pairsLo/eukdetect-results-summary-unfiltered.tsv
+
+pairsLoBowtie2/results/our-method.results-summary.tsv: pairsLo/conf.yaml
+	mkdir -pv pairsLoBowtie2
+	mkdir -pv pairsLoBowtie2/results.tmp
+	mkdir -pv pairsLoBowtie2/results
+	ls `pwd`/pairsLo/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsLoBowtie2/in.tsv
+	# temporary: these had no results
+	perl -i -nE 'print unless /taxonA1034304taxonB41058/ or /taxonA1034304taxonB5067/ or /taxonA148810taxonB270529/ or /taxonA1756245taxonB33428/' ./pairsLoBowtie2/in.tsv
+	bash scripts/run_CORRAL.sh `pwd`/pairsLoBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsLoBowtie2/work `pwd`/pairsLoBowtie2/results.tmp `pwd`/pairsLoBowtie2/results
+
+pairs/results-summary-all.tsv: pairs/eukdetect-results-summary.tsv pairsBowtie2/results/our-method.results-summary.tsv pairsLo/eukdetect-results-summary.tsv pairsLoBowtie2/results/our-method.results-summary.tsv
 	python3 scripts/parse_results_for_simulated_pairs.py \
 		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
 		--refdb-ncbi refdb/taxa.sqlite \
 		--input "EukDetect:pairs/eukdetect-results-summary.tsv" \
 		--input "CORRAL:pairsBowtie2/results/our-method.results-summary.tsv" \
+		--input "EukDetectLo:pairsLo/eukdetect-results-summary.tsv" \
+		--input "CORRALLo:pairsLoBowtie2/results/our-method.results-summary.tsv" \
 		--output-tsv "pairs/results-summary-all.tsv"
 
 figures/wgsimMutationRate.png: tmp/wgsimMutationRate.json

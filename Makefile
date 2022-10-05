@@ -197,14 +197,32 @@ pairsLoBowtie2/results/our-method.results-summary.tsv: pairsLo/conf.yaml
 	perl -i -nE 'print unless /taxonA1034304taxonB41058/ or /taxonA1034304taxonB5067/ or /taxonA148810taxonB270529/ or /taxonA1756245taxonB33428/' ./pairsLoBowtie2/in.tsv
 	bash scripts/run_CORRAL.sh `pwd`/pairsLoBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsLoBowtie2/work `pwd`/pairsLoBowtie2/results.tmp `pwd`/pairsLoBowtie2/results
 
-pairs/results-summary-all.tsv: pairs/eukdetect-results-summary.tsv pairsBowtie2/results/our-method.results-summary.tsv pairsLo/eukdetect-results-summary.tsv pairsLoBowtie2/results/our-method.results-summary.tsv
+pairsMid/conf.yaml: pairs/confusable_pairs.tsv
+	mkdir -pv pairsMid/tmpsim
+	mkdir -pv pairsMid/input
+	bash scripts/make_pairs.sh refdb pairs/confusable_pairs.tsv pairsMid/tmpsim pairsMid/input pairsMid/conf.yaml pairsMid/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna 0.05
+
+pairsMid/eukdetect-results-summary.tsv: pairsMid/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules pairsMid/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh pairsMid/conf.yaml 30 pairsMid/eukdetect.rules pairsMid/eukdetect-results-summary.tsv pairsMid/eukdetect-results-summary-unfiltered.tsv
+
+pairsMidBowtie2/results/our-method.results-summary.tsv: pairsMid/conf.yaml
+	mkdir -pv pairsMidBowtie2
+	mkdir -pv pairsMidBowtie2/results.tmp
+	mkdir -pv pairsMidBowtie2/results
+	ls `pwd`/pairsMid/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsMidBowtie2/in.tsv
+	bash scripts/run_CORRAL.sh `pwd`/pairsMidBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsMidBowtie2/work `pwd`/pairsMidBowtie2/results.tmp `pwd`/pairsMidBowtie2/results
+
+pairs/results-summary-all.tsv: pairs/eukdetect-results-summary.tsv pairsBowtie2/results/our-method.results-summary.tsv pairsLo/eukdetect-results-summary.tsv pairsLoBowtie2/results/our-method.results-summary.tsv pairsMid/eukdetect-results-summary.tsv pairsMidBowtie2/results/our-method.results-summary.tsv
 	python3 scripts/parse_results_for_simulated_pairs.py \
 		--refdb-marker-to-taxon-path refdb/busco_taxid_link.txt \
 		--refdb-ncbi refdb/taxa.sqlite \
-		--input "EukDetect:pairs/eukdetect-results-summary.tsv" \
-		--input "CORRAL:pairsBowtie2/results/our-method.results-summary.tsv" \
 		--input "EukDetectLo:pairsLo/eukdetect-results-summary.tsv" \
 		--input "CORRALLo:pairsLoBowtie2/results/our-method.results-summary.tsv" \
+		--input "EukDetectMid:pairsMid/eukdetect-results-summary.tsv" \
+		--input "CORRALMid:pairsMidBowtie2/results/our-method.results-summary.tsv" \
+		--input "EukDetectHi:pairs/eukdetect-results-summary.tsv" \
+		--input "CORRALHi:pairsBowtie2/results/our-method.results-summary.tsv" \
 		--output-tsv "pairs/results-summary-all.tsv"
 
 figures/wgsimMutationRate.png: tmp/wgsimMutationRate.json
@@ -237,6 +255,10 @@ figures/dropoutForFilters.png: unknownEuksBowtie2/results-summary-all.tsv
 	echo "Needs fixing!"
 	exit 1
 	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv unknownEuksBowtie2/results-summary-all.tsv --output-png figures/dropoutForFilters.png
+
+# This supplement might need embellishment
+supplement/pairs.xlsx: pairs/results-summary-all.tsv pairs/confusable_pairs.tsv
+	python3 scripts/plot_pairs_pca.py --pca-tsv pairs/confusable_pairs.tsv --results-tsv pairs/results-summary-all.tsv --output-png figures/pairsPca.png supplement/pairs.xlsx
 
 # was interesting once
 supplement/crossvalidation_results_joined_with_num_reads.tsv: refdbCrossValidation/nineTenth.fna.1.bt2 unknownEuksBowtie2/results-summary-all.tsv

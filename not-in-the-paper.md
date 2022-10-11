@@ -1,5 +1,32 @@
 # Not in the paper
 
+```
+G80329
+diabimmune-paper.tsv.csv:G80329,Candida parapsilosis,5480,27,78,15.70%,8.04%,99.64%
+diabimmune-paper.tsv.csv:G80329,Rhodotorula,5533,3,5,3.53%,3.76%,100.00%
+diabimmune-paper.tsv.csv:G80329,Chaetomium globosum CBS 148.51,306901,3,5,1.69%,4.14%,99.79%
+diabimmune.tsv:3104340  G80329  237561  Candida_albicans_SC5314 8
+diabimmune.tsv:3104340  G80329  306901  Chaetomium_globosum_CBS_14851   3
+diabimmune.tsv:3104340  G80329  5480    Candida_parapsilosis    19
+diabimmune.tsv:3104340  G80329  5533    Rhodotorula     3
+```
+The presence of additional C. albicans is very convincing - the hits are in entirely different marker clusters. It took me maybe 15 minutes to re-establish this, but really, I looked at alignments in the .sam.
+
+
+
+G78909
+A report from taxa_in_marker_clusters shows me that no single taxon is best: there are actually a few. Scrolling through marker_all and looking at average identity column shows me values around 95% - so a single unknown taxon is a plausible explanation.
+
+G78500
+Again I looked at the reads. There are 7 reads for `Kazachstania unispora`, nothing else plausibly reported in the sample, and all the 7 reads are short and aligning to one marker. 
+
+### Low abundance
+By design, a lower limit for CORRAL detecting a species is two reads each aligning to a different marker. For EukDetect this is four reads, including possibly two paired reads.
+
+We prepare 336 simulated samples at this minimal abundance, and run EukDetect and CORRAL. For comparison, we also try three changes to EukDetect: using its intermediate ‘all hits’ file, a change of MAPQ >=30 to MAPQ>=30, and both of these at once.
+
+The results are near perfect across the board. EukDetect is only 72% sensitive but this improves in any of the three variants without loss to specificity. This shows that even a low number of reads can act as a basis for taxonomic profiling if they are good evidence and that marker genes can be a good way to identify eukaryotes.
+
 ### Evaluating EukDetect and CORRAL on pairs of species
 
 Next we compare EukDetect and CORRAL is their ability to reliably report a pair of similar species. We use our work on read mapping to inform us which test cases to choose, and EukDetect authors' experiments with a mixture of two *Entamoeba* species - parasitic *E. histolytica* and commensal *E. dispar*, that show that the minimal coverage for EukDetect to adequately distinguish the pair is 0.05. 

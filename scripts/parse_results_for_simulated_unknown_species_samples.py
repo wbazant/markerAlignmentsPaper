@@ -40,7 +40,7 @@ header_shortcuts = dict(header_data)
 header = [x for x,y in header_data]
 
 def frac_to_score(x):
-    return int(round(x*5, 0)) or 1
+    return int(round(x*100, 0)) or 1
 
 def scorecard(df_summary):
     result = pandas.DataFrame()

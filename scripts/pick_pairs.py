@@ -122,6 +122,12 @@ def pick_subsample(df, DISTANCE_MIN):
 def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, output_tsv, logger):
     df = get_df(sqlite_path)
     df = df.set_index(['taxon_a', 'taxon_b'])
+
+    # if both (x,y) and (y,x) are in the dataset, pseudorandomly pick one of them
+    import hashlib
+    xs = [hashlib.md5(x.encode()).hexdigest() < hashlib.md5(y.encode()).hexdigest() or (y,x) not in df.index for x,y in df.index]
+    df = df.loc[xs]
+
     data_columns = df.columns.to_list()
     logger.debug("Num data points: %s", len(df))
     df[["pca_1", "pca_2"]] = pca_components(df, logger)

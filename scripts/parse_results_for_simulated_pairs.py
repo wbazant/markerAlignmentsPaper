@@ -12,13 +12,17 @@ from lib.ncbi2 import NCBITaxa2
 from lib.utils import read_scrambled_name_to_taxid_from_marker_to_taxon
 
 header_data = [
-  ('has A, has B, has others', 'ABO'),
+  ('has A, has B, has others, good LCA, good genus', 'ABOLG'),
+  ('has A, has B, has others, no good LCA, good genus', 'ABOlG'),
+  ('has A, has B, has others, good LCA, no good genus', 'ABOLg'),
+  ('has A, has B, has others, no good LCA, no good genus', 'ABOlg'),
+  ('has A, has B, has others, good LCA, n/a genus', 'ABOL'),
+  ('has A, has B, has others, no good LCA, n/a genus', 'ABOl'),
   ('has A, has B, no others', 'ABo'),
   ('has A, misses B, has others', 'AbO'),
   ('has A, misses B, no others', 'Abo'),
   ('misses A, has B, has others', 'aBO'),
   ('misses A, has B, no others', 'aBo'),
-  ('misses A, has B, has others', 'aBO'),
   ('misses A, misses B, has others', 'abO'),
   ('No results', 'NR'),
 ]
@@ -55,11 +59,12 @@ def add_stats(counts):
 
     return counts_with_stats
 
-def sc(all_results, input_file, taxid_a, taxid_b):
+def sc(ncbi, all_results, input_file, taxid_a, taxid_b, lca_taxid, lca_name, lca_rank, lca_genus):
     if (taxid_a, taxid_b) not in all_results[input_file]:
         return "XXX"
     return header_shortcuts[all_results[input_file][(taxid_a, taxid_b)]]
 
+    
 def do_one_line(ncbi, xs):
     sample = xs.pop(0)
 
@@ -69,13 +74,21 @@ def do_one_line(ncbi, xs):
     taxon_a = int(m.group(1))
     taxon_b = int(m.group(2))
 
+    pair_lca_taxid, pair_lca_name, pair_lca_rank, pair_lca_genus = ncbi.lca_info([taxon_a, taxon_b])
     n = int(xs.pop(0))
     if n:
         vs = [int(ncbi.get_taxid_from_string(x)) for x in xs]
         result = []
         result.append("has A" if taxon_a in vs else "misses A")
         result.append("has B" if taxon_b in vs else "misses B")
-        result.append("has others" if set([taxon_a, taxon_b]) != set(vs) else "no others")
+        if all([v in set([taxon_a, taxon_b]) for v in vs]):
+            result.append("no others")
+        else:
+            result.append("has others")
+            if taxon_a in vs and taxon_b in vs:
+                result_lca_taxid, result_lca_name, result_lca_genus, result_lca_genus = ncbi.lca_info(sorted(vs))
+                result.append("good LCA" if result_lca_taxid == pair_lca_taxid else "no good LCA")
+                result.append("good genus" if pair_lca_genus and pair_lca_genus == result_lca_genus else "no good genus" if pair_lca_genus else "n/a genus")
         return taxon_a, taxon_b, ", ".join(result)
     else:
         return taxon_a, taxon_b, "No results"
@@ -119,8 +132,13 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
     all_pairs = set([x for xx in all_results.values() for x in xx ])
     taxid_to_name = ncbi.get_taxid_translator(all_taxids)
 
-    columns_detailed = ["taxon_a", "taxon_b"] + input_names
-    data_detailed = [[str(taxid_a) + "|" + taxid_to_name[taxid_a], str(taxid_b) + "|" + taxid_to_name[taxid_b] ] + [sc(all_results, input_name, taxid_a, taxid_b) for input_name in input_names] for taxid_a, taxid_b in sorted(all_pairs)]
+    columns_detailed = ["taxon_a", "taxon_b", "taxon_lca_ab", "rank_lca_ab", "genus_lca_ab"] + input_names
+    data_detailed = []
+    for taxid_a, taxid_b in sorted(all_pairs):
+        lca_taxid, lca_name, lca_rank, lca_genus = ncbi.lca_info([taxid_a, taxid_b])
+        ids = [str(taxid_a) + "|" + taxid_to_name[taxid_a], str(taxid_b) + "|" + taxid_to_name[taxid_b], str(lca_taxid) + "|" +lca_name, lca_rank, lca_genus ]
+        results = [sc(ncbi, all_results, input_name, taxid_a, taxid_b, lca_taxid, lca_name, lca_rank, lca_genus) for input_name in input_names]
+        data_detailed.append(ids+results)
     df_detailed = pandas.DataFrame(columns = columns_detailed, data = data_detailed)
 
     columns_summary = ["Name"] + ["{}: {}".format(header_shortcuts[h], h) for h in header]
@@ -148,14 +166,14 @@ def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files, output_tsv, output_x
             worksheet_summary = writer.sheets[sheet_name_summary]
             cell_format_summary = writer.book.add_format({'bold': True})
             worksheet_summary.set_column(0, 0, 30,cell_format_summary )
-            fix_column_width(writer, sheet_name=sheet_name_summary, df = df_summary)
+            #fix_column_width(writer, sheet_name=sheet_name_summary, df = df_summary)
 
             sheet_name_detailed = "Results by species"
             df_detailed.to_excel(writer, sheet_name=sheet_name_detailed, index = False)
             worksheet_detailed = writer.sheets[sheet_name_detailed]
             cell_format_detailed = writer.book.add_format({'bold': True})
             worksheet_detailed.set_column(0, 0, 30,cell_format_detailed )
-            fix_column_width(writer, sheet_name=sheet_name_detailed, df = df_detailed)
+            #fix_column_width(writer, sheet_name=sheet_name_detailed, df = df_detailed)
 
 
 def parse(argv):

@@ -3,8 +3,36 @@ import argparse
 import sys
 import matplotlib.pyplot as plt
 
+#ABOLG: has A, has B, has others, good LCA, good genus
+#ABOlG: has A, has B, has others, no good LCA, good genus
+#ABOLg: has A, has B, has others, good LCA, no good genus
+#ABOlg: has A, has B, has others, no good LCA, no good genus
+#ABOL: has A, has B, has others, good LCA, n/a genus
+#ABOl: has A, has B, has others, no good LCA, n/a genus
+#ABo: has A, has B, no others
+#AbO: has A, misses B, has others
+#Abo: has A, misses B, no others
+#aBO: misses A, has B, has others
+#aBo: misses A, has B, no others
+#abO: misses A, misses B, has others
+#NR: No results
+colors = {
+  "ABOLG": "#40E0D0", # turquoise
+  "ABOlG": "#A7C7E7", # pastel blue
+  "ABOLg": "#40E0D0", # turquoise
+  "ABOlg": "#954535", # chestnut
+  "ABOL": "#40E0D0",  # turquoise
+  "ABOl": "#F88379",  # coral pink
+  "ABo": "blue",
+  "AbO": "#FAFA33", # lemon yellow
+  "Abo": "#FFE5B4", # peach
+  "aBO": "#FAFA33", # lemon yellow
+  "aBo": "#C9CC3F", # pear
+  "abO": "#FAFA33", # lemon yellow
+  "NR": "grey",
+}
 def cat_to_color(x):
-    return "blue" if x == "ABo" else "purple" if x == "ABO" else "yellow" if x else "grey"
+    return colors[x] if x in colors else "grey" # 4 XXX datapoints at 0.01 where we failed to draw any reads
 
 
 def subplot(df, column, label, ax):

@@ -20,6 +20,10 @@ A report from taxa_in_marker_clusters shows me that no single taxon is best: the
 G78500
 Again I looked at the reads. There are 7 reads for `Kazachstania unispora`, nothing else plausibly reported in the sample, and all the 7 reads are short and aligning to one marker. 
 
+
+- I look at raw alignment files
+- I apply ad-hoc rules of reasoning as I do it, like "this species has seven reads aligning to one marker, but if it was really there and produced seven reads randomly, they should be in a few markers and not just one"
+- I use absence of information as evidence, like "if these reads aligning to two two species were really from one species, we should see shared alignments, but they're not there"
 ### Low abundance
 By design, a lower limit for CORRAL detecting a species is two reads each aligning to a different marker. For EukDetect this is four reads, including possibly two paired reads.
 

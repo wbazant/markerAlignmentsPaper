@@ -2,8 +2,10 @@ import pandas
 import sqlite3
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import euclidean
-from ete3 import NCBITaxa
+import os
 import sys
+sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), "../"))
+from lib.ncbi2 import NCBITaxa2
 import argparse
 import logging
 
@@ -135,15 +137,17 @@ def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, output_tsv, l
     logger.debug("Num subsampled points: %s", len(subsample))
     df["is_picked"] =  df.index.map(lambda n: n in subsample)
     df = df.reset_index()
-    ncbi = NCBITaxa(refdb_ncbi)
+    ncbi = NCBITaxa2(refdb_ncbi)
     t = ncbi.get_taxid_translator(set(df["taxon_a"].values) | set(df["taxon_b"].values))
     df["taxon_a_name"] = df["taxon_a"].map(lambda x: t[int(x)])
     df["taxon_b_name"] = df["taxon_b"].map(lambda x: t[int(x)])
 
-    df = df.sort_values(by="pca_1", ascending = False)
-    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked", "is_both_species"] + ["pca_1", "pca_2"] + data_columns ]
-    df.to_csv(output_tsv, index = False, sep = "\t", float_format='%.3f')
+    lca_columns = ["lca_taxon", "lca_taxon_name", "lca_rank", "lca_genus"]
+    df[lca_columns] = [ncbi.lca_info([taxon_a, taxon_b]) for taxon_a, taxon_b in zip(df["taxon_a"], df["taxon_b"])]
 
+    df = df.sort_values(by="pca_1", ascending = False)
+    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked", "is_both_species"] + lca_columns + ["pca_1", "pca_2"] + data_columns ]
+    df.to_csv(output_tsv, index = False, sep = "\t", float_format='%.3f')
 
 
 def opts(argv):

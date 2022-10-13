@@ -1,11 +1,9 @@
-import sys
-import os
-import argparse
-import pysam
-import re
 import pandas
+import argparse
+import sys
+import matplotlib.pyplot as plt
 
-
+import re
 import os
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), "../"))
 from lib.ncbi2 import NCBITaxa2
@@ -29,28 +27,6 @@ header_data = [
 
 header_shortcuts = dict(header_data)
 header = [x for x,y in header_data]
-
-def frac_to_score(x):
-    return int(round(x*5, 0)) or 1
-
-def scorecard(df_summary):
-    result = pandas.DataFrame()
-    result["Method"] = df_summary["Name"]
-    return result
-        
-
-def pat(xs, counts):
-    s = 0
-    for l, c in counts.items():
-        if l == 'No results' or c == 0 or len(l.split(", ")) < len(xs):
-            continue
-        m = True
-        for n in range(0, len(xs)):
-            m = m and (xs[n] == "." or xs[n] == l.split(", ")[n])
-        if m:
-            s += c
-    return s
-
 
 def add_stats(counts):
     s = sum(counts.values())
@@ -111,7 +87,7 @@ def do_one(ncbi, input_file):
     counts_with_stats = add_stats(counts)
     return counts_with_stats, cs_for_species
 
-def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
+def read_all(refdb_ncbi, input_files, **kwargs):
     ncbi = NCBITaxa2(refdb_ncbi)
 
     all_results = {}
@@ -145,7 +121,44 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
     data_summary = [[input_name] + [ all_counts[input_name][h] for h in header ] for input_name in input_names]
     df_summary = pandas.DataFrame(columns = columns_summary, data = data_summary)
     return df_detailed, df_summary
+#ABOLG: has A, has B, has others, good LCA, good genus
+#ABOlG: has A, has B, has others, no good LCA, good genus
+#ABOLg: has A, has B, has others, good LCA, no good genus
+#ABOlg: has A, has B, has others, no good LCA, no good genus
+#ABOL: has A, has B, has others, good LCA, n/a genus
+#ABOl: has A, has B, has others, no good LCA, n/a genus
+#ABo: has A, has B, no others
+#AbO: has A, misses B, has others
+#Abo: has A, misses B, no others
+#aBO: misses A, has B, has others
+#aBo: misses A, has B, no others
+#abO: misses A, misses B, has others
+#NR: No results
+colors = {
+  "ABOLG": "#40E0D0", # turquoise
+  "ABOlG": "#A7C7E7", # pastel blue
+  "ABOLg": "#40E0D0", # turquoise
+  "ABOlg": "#954535", # chestnut
+  "ABOL": "#40E0D0",  # turquoise
+  "ABOl": "#F88379",  # coral pink
+  "ABo": "blue",
+  "AbO": "#FAFA33", # lemon yellow
+  "Abo": "#FFE5B4", # peach
+  "aBO": "#FAFA33", # lemon yellow
+  "aBo": "#C9CC3F", # pear
+  "abO": "#FAFA33", # lemon yellow
+  "NR": "grey",
+}
+def cat_to_color(x):
+    return colors[x] if x in colors else "grey" # 4 XXX datapoints at 0.01 where we failed to draw any reads
 
+
+def subplot(df, column, label, ax):
+    df.plot.scatter("pca_1", "pca_2", c = df[column].map(cat_to_color), label = label, ax = ax)
+    ax.axis('off')
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.3, box.width, box.height*0.7])
+    ax.legend(loc='upper center', edgecolor = "white", markerscale = 0, bbox_to_anchor=(0.5, -0.05))
 
 #https://stackoverflow.com/a/40535454
 def fix_column_width(writer, sheet_name, df):
@@ -153,46 +166,66 @@ def fix_column_width(writer, sheet_name, df):
     lengths = [len(str(df[col].name)) for idx, col in enumerate(df)]
     worksheet.set_column(0, len(lengths), max(lengths))
 
-def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files, output_tsv, output_xlsx):
-    df_detailed, df_summary = read_all(refdb_ncbi, refdb_marker_to_taxon_path, input_files)
+def do(refdb_ncbi, input_files, pca_tsv, output_tsv, output_png, output_xlsx):
+    results_df_detailed, results_df_summary = read_all(refdb_ncbi, input_files)
+    results_df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
-    df_detailed.to_csv(output_tsv, sep = "\t", index = False)
+    results_df_detailed = results_df_detailed.drop(["taxon_lca_ab", "rank_lca_ab", "genus_lca_ab"], axis=1)
+    results_df_detailed['taxon_a'] =  results_df_detailed['taxon_a'].map(lambda x: x.split("|")[0])
+    results_df_detailed['taxon_b'] =  results_df_detailed['taxon_b'].map(lambda x: x.split("|")[0])
 
-    if output_xlsx:
-        df_scorecard = scorecard(df_summary)
-        with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-            sheet_name_summary = "Counts and stats"
-            df_summary.to_excel(writer, sheet_name=sheet_name_summary, index = False)
-            worksheet_summary = writer.sheets[sheet_name_summary]
-            cell_format_summary = writer.book.add_format({'bold': True})
-            worksheet_summary.set_column(0, 0, 30,cell_format_summary )
-            #fix_column_width(writer, sheet_name=sheet_name_summary, df = df_summary)
+    pca_df = pandas.read_csv(pca_tsv, sep = "\t").astype({"taxon_a": str, "taxon_b": str})
+    df = pca_df.merge(results_df_detailed, on = ["taxon_a", "taxon_b"])
 
-            sheet_name_detailed = "Results by species"
-            df_detailed.to_excel(writer, sheet_name=sheet_name_detailed, index = False)
-            worksheet_detailed = writer.sheets[sheet_name_detailed]
-            cell_format_detailed = writer.book.add_format({'bold': True})
-            worksheet_detailed.set_column(0, 0, 30,cell_format_detailed )
-            #fix_column_width(writer, sheet_name=sheet_name_detailed, df = df_detailed)
+    fig, axs = plt.subplots(3, 2)
+    subplot(df, "EukDetectLo", "EukDetect, 0.01 cov.", axs[0][0])
+    subplot(df, "EukDetectMid", "EukDetect, 0.05 cov.", axs[1][0])
+    subplot(df, "EukDetectHi", "EukDetect, 0.10 cov.", axs[2][0])
+    subplot(df, "CORRALLo", "CORRAL, 0.01 cov.", axs[0][1])
+    subplot(df, "CORRALMid", "CORRAL, 0.05 cov.", axs[1][1])
+    subplot(df, "CORRALHi", "CORRAL, 0.10 cov.", axs[2][1])
+
+    fig.savefig(output_png, bbox_inches='tight', dpi=199)
+
+    df = pca_df.merge(results_df_detailed, on = ["taxon_a", "taxon_b"], how='left')
+    df.fillna("")
+    cs = df.columns
+    df = df.set_index(['taxon_a_name', 'taxon_b_name'])
+    
+    with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
+        sheet_name_summary = "Coding legend and result counts"
+        results_df_summary.transpose().to_excel(writer, sheet_name=sheet_name_summary, header = False)
+        worksheet_summary = writer.sheets[sheet_name_summary]
+        cell_format_summary = writer.book.add_format({'bold': True})
+        worksheet_summary.set_column(0, 0, 30, cell_format_summary )
+        worksheet_summary.set_column(1, 10, 20)
+        worksheet_summary.set_row(0, 20, cell_format_summary )
+
+        sheet_name_detailed = "PCA coordinates and results"
+        df.to_excel(writer, sheet_name = sheet_name_detailed,  float_format="%.3f")
+        worksheet_detailed = writer.sheets[sheet_name_detailed]
+        cell_format_detailed = writer.book.add_format({'bold': True})
+        worksheet_detailed.set_column(0, 1, 30,cell_format_detailed )
+        worksheet_detailed.set_column(1, 100, 20)
 
 
-def parse(argv):
+def opts(argv):
     parser = argparse.ArgumentParser(
-      description="parse_whole_samples_results",
+      description="parse pairs results and plot / spreadsheet them",
       formatter_class = argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--refdb-marker-to-taxon-path", type=str, action="store", dest="refdb_marker_to_taxon_path", help = "Lookup file, two columns - marker name, taxon name", required = True)
     parser.add_argument("--refdb-ncbi", type=str, action="store", dest="refdb_ncbi", help = "argument for ete.NCBITaxa", required = True)
     parser.add_argument("--input", type=str, action="append", dest="input_files", help = "results summary inputs", required = True)
+    parser.add_argument("--pca-tsv", type=str, action="store", dest="pca_tsv", required=True)
     parser.add_argument("--output-tsv", type=str, action="store", dest="output_tsv", help = "result tsv", required = True)
-    parser.add_argument("--output-xlsx", type=str, action="store", dest="output_xlsx", help = "result xlsx", default = None)
+    parser.add_argument("--output-png", type=str, action="store", dest="output_png", required=True)
+    parser.add_argument("--output-xlsx", type=str, action="store", dest="output_xlsx", required=True)
     return parser.parse_args(argv)
 
-
 def main(argv=sys.argv[1:]):
-    options=parse(argv)
-    do(**vars(options))
-
+    options = opts(argv)
+    kwargs = vars(options)
+    do(**kwargs)
 
 if __name__ == '__main__':
     main()

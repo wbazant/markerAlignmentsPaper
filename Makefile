@@ -256,9 +256,19 @@ figures/dropoutForFilters.png: unknownEuksBowtie2/results-summary-all.tsv
 	exit 1
 	python3 scripts/plot_whole_samples_dropout_for_filters.py --input-tsv unknownEuksBowtie2/results-summary-all.tsv --output-png figures/dropoutForFilters.png
 
-# This supplement might need embellishment
-supplement/pairs.xlsx: pairsAll/results-summary-all.tsv pairsAll/confusable_pairs.tsv
-	python3 scripts/plot_pairs_pca.py --pca-tsv pairsAll/confusable_pairs.tsv --results-tsv pairsAll/results-summary-all.tsv --output-png figures/pairsPca.png --output-xlsx supplement/pairs.xlsx
+supplement/pairs.xlsx: pairsAll/confusable_pairs.tsv pairsHi/eukdetect-results-summary.tsv pairsHiBowtie2/results/our-method.results-summary.tsv pairsLo/eukdetect-results-summary.tsv pairsLoBowtie2/results/our-method.results-summary.tsv pairsMid/eukdetect-results-summary.tsv pairsMidBowtie2/results/our-method.results-summary.tsv
+	python3 scripts/parse_pairs_results_for_spreadsheet_and_pca.py \
+		--refdb-ncbi refdb/taxa.sqlite \
+		--input "EukDetectLo:pairsLo/eukdetect-results-summary.tsv" \
+		--input "CORRALLo:pairsLoBowtie2/results/our-method.results-summary.tsv" \
+		--input "EukDetectMid:pairsMid/eukdetect-results-summary.tsv" \
+		--input "CORRALMid:pairsMidBowtie2/results/our-method.results-summary.tsv" \
+		--input "EukDetectHi:pairsHi/eukdetect-results-summary.tsv" \
+		--input "CORRALHi:pairsHiBowtie2/results/our-method.results-summary.tsv" \
+		--output-tsv pairsAll/results-summary-all.tsv \
+		--pca-tsv pairsAll/confusable_pairs.tsv \
+		--output-png figures/pairsPca.png \
+		--output-xlsx supplement/pairs.xlsx
 
 # was interesting once
 supplement/crossvalidation_results_joined_with_num_reads.tsv: refdbCrossValidation/nineTenth.fna.1.bt2 unknownEuksBowtie2/results-summary-all.tsv

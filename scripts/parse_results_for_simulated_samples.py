@@ -24,12 +24,29 @@ header_data = [
   ('Single correct taxon', 'SC'),
   ('Multiple incorrect taxa', 'MI'),
   ('Single incorrect taxon', 'SI'),
-  ('Outcomes containing correct taxon', '(SC+MC)/total'),
-  ('Ratio of single correct taxon to all reported results', 'SC/(total-NR)'),
 ]
 
 header_shortcuts = dict(header_data)
 header = [x for x,y in header_data]
+
+sensitivity_and_specificity_stats_data = [
+        ('Sensitivity: outcomes containing correct taxon', '(SC+MC)/total'),
+        ('Specificity: ratio of single correct taxon to all reported results', 'SC/(total-NR)'),
+]
+
+sensitivity_and_specificity_stats_shortcuts = dict(sensitivity_and_specificity_stats_data)
+sensitivity_and_specificity_stats = [x for x,y in sensitivity_and_specificity_stats_data]
+
+def print_ratio(top, bottom):
+    return "{}/{}: {:.1f}%".format(top, bottom, 100.0 * top / bottom if bottom > 0 else 0 )
+
+def get_stats(counts):
+    num_all_results = sum(counts.values())
+
+    result = {}
+    result["Sensitivity: outcomes containing correct taxon"] =  print_ratio(counts["Single correct taxon"] + counts["Multiple taxa including correct"], num_all_results)
+    result["Specificity: ratio of single correct taxon to all reported results"] = print_ratio(counts["Single correct taxon"], (num_all_results - counts["No results"] ))
+    return result
 
 def frac_to_score(x):
     return int(round(x*100, 0)) or 1
@@ -54,15 +71,6 @@ def pat(xs, counts):
             s += c
     return s
 
-
-def add_stats(counts):
-    s = sum(counts.values())
-
-    counts_with_stats = counts.copy()
-    counts_with_stats["Outcomes containing correct taxon"] = round(1.0 * (counts["Single correct taxon"] + counts["Multiple taxa including correct"] ) / s, 3)
-    counts_with_stats["Ratio of single correct taxon to all reported results"] = round(1.0 * counts["Single correct taxon"] / (s - counts["No results"] ), 3) if s > counts["No results"] else 0
-
-    return counts_with_stats
 
 def sc(all_results, input_file, taxid):
     if taxid not in all_results[input_file]:
@@ -106,8 +114,7 @@ def do_one(scrambled_name_to_taxid, ncbi, input_file):
             counts[c]+=1
             cs_for_species[source_taxid] = c
 
-    counts_with_stats = add_stats(counts)
-    return counts_with_stats, cs_for_species
+    return counts, cs_for_species
 
 def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
     scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
@@ -116,6 +123,7 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
     all_results = {}
     input_names = []
     all_counts = {}
+    all_stats = {}
     for input_file in input_files:
         if ":" in input_file:
             (input_name, input_path) = input_file.split(":")
@@ -125,6 +133,7 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
         input_names.append(input_name)
         counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, input_path)
         all_counts[input_name] = counts
+        all_stats[input_name] = get_stats(counts)
         all_results[input_name] = cs_for_species
 
     all_taxids = set([x for xx in all_results.values() for x in xx ])
@@ -137,7 +146,11 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path,  input_files, **kwargs):
     columns_summary = ["Name"] + ["{}: {}".format(header_shortcuts[h], h) for h in header]
     data_summary = [[input_name] + [ all_counts[input_name][h] for h in header ] for input_name in input_names]
     df_summary = pandas.DataFrame(columns = columns_summary, data = data_summary)
-    return df_detailed, df_summary
+
+    columns_stats = ["Name"] + ["{}: {}".format(sensitivity_and_specificity_stats_shortcuts[h], h) for h in sensitivity_and_specificity_stats]
+    data_stats = [[input_name] + [ all_stats[input_name][h] for h in sensitivity_and_specificity_stats] for input_name in input_names]
+    df_stats = pandas.DataFrame(columns = columns_stats, data = data_stats)
+    return df_detailed, df_summary, df_stats
 
 
 #https://stackoverflow.com/a/40535454
@@ -147,21 +160,20 @@ def fix_column_width(writer, sheet_name, df):
     worksheet.set_column(0, len(lengths), max(lengths))
 
 def do(refdb_ncbi, refdb_marker_to_taxon_path, input_files, output_tsv, output_xlsx):
-    df_detailed, df_summary = read_all(refdb_ncbi, refdb_marker_to_taxon_path, input_files)
+    df_detailed, df_summary, df_stats = read_all(refdb_ncbi, refdb_marker_to_taxon_path, input_files)
 
     df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
     if output_xlsx:
-        df_scorecard = scorecard(df_summary)
         with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-            sheet_name_scorecard = "Scorecard"
-            df_scorecard.to_excel(writer, sheet_name=sheet_name_scorecard, index = False)
-            worksheet_scorecard = writer.sheets[sheet_name_scorecard]
-            cell_format_scorecard = writer.book.add_format({'bold': True})
-            worksheet_scorecard.set_column(0, 0, 30,cell_format_scorecard )
-            fix_column_width(writer, sheet_name=sheet_name_scorecard, df = df_scorecard)
+            sheet_name_stats = "Summary stats"
+            df_stats.to_excel(writer, sheet_name=sheet_name_stats, index = False)
+            worksheet_stats = writer.sheets[sheet_name_stats]
+            cell_format_stats = writer.book.add_format({'bold': True})
+            worksheet_stats.set_column(0, 0, 30,cell_format_stats )
+            fix_column_width(writer, sheet_name=sheet_name_stats, df = df_stats)
 
-            sheet_name_summary = "Counts and stats"
+            sheet_name_summary = "Summary counts"
             df_summary.to_excel(writer, sheet_name=sheet_name_summary, index = False)
             worksheet_summary = writer.sheets[sheet_name_summary]
             cell_format_summary = writer.book.add_format({'bold': True})

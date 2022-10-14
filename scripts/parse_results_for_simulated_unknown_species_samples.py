@@ -28,28 +28,28 @@ header_data = [   ('No results', 'NR'),
     ('Many results, same genus, not taxonomically closest', 'pGc'),
     ('One result, not same genus, not taxonomically closest', 'Pgc'),
     ('Many results, not same genus, not taxonomically closest', 'pgc'),
-    ('Signal detected', 'SD = (total - NR) / total'),
-    ('Detected signal is one species', 'P.. / SD'),
-    ('Detected signal is same genus', '.G. / SD'),
-    ('Detected signal is one same genus species', 'PG. / SD'),
-    ('Detected signal is all taxonomically closest', '..C / SD'),
-    ('Detected signal is one taxonomically closest species', 'P.C / SD'),
-    ('Detected signal is one same genus taxonomically closest species', 'PGC / SD')]
-
+]
 header_shortcuts = dict(header_data)
 header = [x for x,y in header_data]
 
-def frac_to_score(x):
-    return int(round(x*100, 0)) or 1
+sensitivity_and_specificity_stats_data = [
+    ('Fraction of samples with results', 'SD = (total - NR) / total'),
+    ('Fraction of results that are one species', 'P.. / SD'),
+    ('Fraction of results that are same genus', '.G. / SD'),
+    ('Fraction of results that are one same genus species', 'PG. / SD'),
+    ('Fraction of results that are all taxonomically closest', '..C / SD'),
+    ('Fraction of results that are one taxonomically closest species', 'P.C / SD'),
+    ('Fraction of results that are one same genus taxonomically closest species', 'PGC / SD')
+    ]
+sensitivity_and_specificity_stats_shortcuts = dict(sensitivity_and_specificity_stats_data)
+sensitivity_and_specificity_stats = [x for x,y in sensitivity_and_specificity_stats_data]
 
-def scorecard(df_summary):
-    result = pandas.DataFrame()
-    result["Method"] = df_summary["Name"]
-    result["Reports anything at all"] = df_summary["SD = (total - NR) / total: Signal detected"].map(frac_to_score)
-    result["Reports one result rather than many"] = df_summary["P.. / SD: Detected signal is one species"].map(frac_to_score)
-    result["Reports only closely related species"] = df_summary[[".G. / SD: Detected signal is same genus", "..C / SD: Detected signal is all taxonomically closest"]].apply(hmean, axis=1).map(frac_to_score)
-    return result
-        
+pie = [
+    "No results",
+    "Wrong genus",
+    "Correct genus but >1 species",
+    "One species in correct genus"
+]
 
 def pat(xs, counts):
     s = 0
@@ -64,20 +64,37 @@ def pat(xs, counts):
     return s
 
 
-def add_stats(counts):
-    s = sum(counts.values())
-    S = pat([".", ".", "."], counts)
+def print_ratio(top, bottom):
+    return "{}/{}: {:.1f}%".format(top, bottom, 100.0 * top / bottom)
 
-    counts_with_stats = counts.copy()
-    counts_with_stats["Signal detected"] = round(1.0 * pat([".", ".", "."], counts) / s, 3)
-    counts_with_stats["Detected signal is one species"] = round(1.0 * pat(["One result", ".", "."], counts) / pat([".", ".", "."], counts), 3)
-    counts_with_stats["Detected signal is same genus"] = round(1.0 * pat([".", "same genus", "."], counts) / pat([".", ".", "."], counts), 3)
-    counts_with_stats["Detected signal is one same genus species"] = round(1.0 * pat(["One result", "same genus", "."], counts) / pat([".", ".", "."], counts), 3)
-    counts_with_stats["Detected signal is all taxonomically closest"] = round(1.0 * pat([".", ".", "all taxonomically closest"], counts) / pat([".", ".", "."], counts), 3)
-    counts_with_stats["Detected signal is one taxonomically closest species"] = round(1.0 * pat(["One result", ".", "all taxonomically closest"], counts) / pat([".", ".", "."], counts), 3)
-    counts_with_stats["Detected signal is one same genus taxonomically closest species"] = round(1.0 * pat(["One result", "same genus", "all taxonomically closest"], counts) / pat([".", ".", "."], counts), 3)
+def get_stats(counts):
+    num_all_results = sum(counts.values())
+    num_nonempty_results = pat([".", ".", "."], counts)
 
-    return counts_with_stats
+    result = {}
+    result["Fraction of samples with results"] = print_ratio(num_nonempty_results, num_all_results)
+    result["Fraction of results that are one species"] = print_ratio(pat(["One result", ".", "."], counts), num_nonempty_results)
+    result["Fraction of results that are same genus"] = print_ratio(pat([".", "same genus", "."], counts), num_nonempty_results)
+    result["Fraction of results that are one same genus species"] = print_ratio(pat(["One result", "same genus", "."], counts), num_nonempty_results)
+    result["Fraction of results that are all taxonomically closest"] = print_ratio(pat([".", ".", "all taxonomically closest"], counts), num_nonempty_results)
+    result["Fraction of results that are one taxonomically closest species"] = print_ratio(pat(["One result", ".", "all taxonomically closest"], counts), num_nonempty_results)
+    result["Fraction of results that are one same genus taxonomically closest species"] = print_ratio(pat(["One result", "same genus", "all taxonomically closest"], counts), num_nonempty_results)
+    return result
+
+def get_pie_data(counts):
+    num_all_results = sum(counts.values())
+    num_nonempty_results = pat([".", ".", "."], counts)
+
+    num_same_genus_results = pat([".", "same genus", "."], counts)
+    num_one_same_genus_results = pat(["One result", "same genus", "."], counts)
+
+    result = {}
+    result["No results"] = num_all_results - num_nonempty_results
+    result["Wrong genus"] = num_nonempty_results - num_same_genus_results
+    result["Correct genus but >1 species"] = num_same_genus_results - num_one_same_genus_results
+    result["One species in correct genus"] = num_one_same_genus_results
+    return result
+
 
 def sc(all_results, input_file, taxid):
     if taxid not in all_results[input_file]:
@@ -114,14 +131,13 @@ def do_one(scrambled_name_to_taxid, ncbi, good_matches, input_file):
             counts[c]+=1
             cs_for_species[source_taxid] = c
 
-    counts_with_stats = add_stats(counts)
-    return counts_with_stats, cs_for_species
+    return counts, cs_for_species
 
 def read_good_matches(good_matches_path):
     df = pandas.read_csv(good_matches_path, sep = "\t")
     return set(zip(df["Holdout taxid"].astype(int), df["Reference taxid"].astype(int)))
 
-def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files):
+def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files, **kwargs):
     scrambled_name_to_taxid = read_scrambled_name_to_taxid_from_marker_to_taxon(refdb_marker_to_taxon_path)
     good_matches = read_good_matches(good_matches_path)
 
@@ -130,6 +146,8 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_fi
     all_results = {}
     input_names = []
     all_counts = {}
+    all_stats = {}
+    all_pies = {}
     for input_file in input_files:
         if ":" in input_file:
             (input_name, input_path) = input_file.split(":")
@@ -139,6 +157,8 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_fi
         input_names.append(input_name)
         counts, cs_for_species = do_one(scrambled_name_to_taxid, ncbi, good_matches, input_path)
         all_counts[input_name] = counts
+        all_stats[input_name] = get_stats(counts)
+        all_pies[input_name] = get_pie_data(counts)
         all_results[input_name] = cs_for_species
 
     all_taxids = set([x for xx in all_results.values() for x in xx ])
@@ -151,7 +171,16 @@ def read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_fi
     columns_summary = ["Name"] + ["{}: {}".format(header_shortcuts[h], h) for h in header]
     data_summary = [[input_name] + [ all_counts[input_name][h] for h in header ] for input_name in input_names]
     df_summary = pandas.DataFrame(columns = columns_summary, data = data_summary)
-    return df_detailed, df_summary
+
+    columns_stats = ["Name"] + ["{}: {}".format(sensitivity_and_specificity_stats_shortcuts[h], h) for h in sensitivity_and_specificity_stats]
+    data_stats = [[input_name] + [ all_stats[input_name][h] for h in sensitivity_and_specificity_stats] for input_name in input_names]
+    df_stats = pandas.DataFrame(columns = columns_stats, data = data_stats)
+
+    columns_pie = ["Name"] + pie
+    data_pie = [[input_name] + [ all_pies[input_name][h] for h in pie] for input_name in input_names]
+    df_pie = pandas.DataFrame(columns = columns_pie, data = data_pie).set_index("Name").transpose()
+    
+    return df_detailed, df_summary, df_stats, df_pie
 
 
 #https://stackoverflow.com/a/40535454
@@ -161,21 +190,27 @@ def fix_column_width(writer, sheet_name, df):
     worksheet.set_column(0, len(lengths), max(lengths))
 
 def do(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files, output_tsv, output_xlsx):
-    df_detailed, df_summary = read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files)
+    df_detailed, df_summary, df_stats, df_pie = read_all(refdb_ncbi, refdb_marker_to_taxon_path, good_matches_path, input_files)
 
     df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
     if output_xlsx:
-        df_scorecard = scorecard(df_summary)
         with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-            sheet_name_scorecard = "Scorecard"
-            df_scorecard.to_excel(writer, sheet_name=sheet_name_scorecard, index = False)
+            sheet_name_pie = "Pies"
+            df_pie.to_excel(writer, sheet_name=sheet_name_pie, index = True, header = True)
+            worksheet_pie = writer.sheets[sheet_name_pie]
+            cell_format_pie = writer.book.add_format({'bold': True})
+            worksheet_pie.set_column(0, 0, 30, cell_format_pie )
+            worksheet_pie.set_column(1, 20, 20)
+
+            sheet_name_scorecard = "Summary stats"
+            df_stats.to_excel(writer, sheet_name=sheet_name_scorecard, index = False)
             worksheet_scorecard = writer.sheets[sheet_name_scorecard]
             cell_format_scorecard = writer.book.add_format({'bold': True})
             worksheet_scorecard.set_column(0, 0, 30,cell_format_scorecard )
-            fix_column_width(writer, sheet_name=sheet_name_scorecard, df = df_scorecard)
+            fix_column_width(writer, sheet_name=sheet_name_scorecard, df = df_stats)
 
-            sheet_name_summary = "Counts and stats"
+            sheet_name_summary = "Summary counts"
             df_summary.to_excel(writer, sheet_name=sheet_name_summary, index = False)
             worksheet_summary = writer.sheets[sheet_name_summary]
             cell_format_summary = writer.book.add_format({'bold': True})

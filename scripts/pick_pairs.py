@@ -1,6 +1,7 @@
 import pandas
 import sqlite3
 from sklearn.decomposition import PCA
+import hashlib
 from scipy.spatial.distance import euclidean
 import os
 import sys
@@ -98,6 +99,8 @@ def pca_components(df, logger):
     logger.debug("Fitting PCA")
     pca.fit(df)
     logger.debug("Done. Explained variance: %s", pca.explained_variance_ratio_)
+    logger.debug("PCA1 = " + " + ".join([str("%.04f"%x) + " * " + str(y) for x, y in zip(pca.components_[0], df.columns)]))
+    logger.debug("PCA2 = " + " + ".join([str("%.04f"%x) + " * " + str(y) for x, y in zip(pca.components_[1], df.columns)]))
     return pca.transform(df)
 
 def pick_subsample(df, DISTANCE_MIN):
@@ -119,15 +122,16 @@ def pick_subsample(df, DISTANCE_MIN):
             list_ok.append((x,y))
     return names_ok
 
-def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, output_tsv, logger):
+def get_df_for_pca(sqlite_path):
     df = get_df(sqlite_path)
     df = df.set_index(['taxon_a', 'taxon_b'])
-
     # if both (x,y) and (y,x) are in the dataset, pseudorandomly pick one of them
-    import hashlib
     xs = [hashlib.md5(x.encode()).hexdigest() < hashlib.md5(y.encode()).hexdigest() or (y,x) not in df.index for x,y in df.index]
     df = df.loc[xs]
+    return df
 
+def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, output_tsv, logger):
+    df = get_df_for_pca(sqlite_path)
     data_columns = df.columns.to_list()
     logger.debug("Num data points: %s", len(df))
     df[["pca_1", "pca_2"]] = pca_components(df, logger)

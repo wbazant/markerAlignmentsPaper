@@ -130,7 +130,7 @@ def is_both_species_column(refdb_markers, df):
     x = set(pandas.read_csv(refdb_markers)['Taxonomy_ID'])
     return df.reset_index().apply(lambda r: int(r['taxon_a']) in x and int(r['taxon_b']) in x, axis = 1).to_list()
 
-def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, second_subsample_distance, second_subsample_size, third_subsample_distance, third_subsample_size, fourth_subsample_size, output_tsv, logger):
+def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, second_subsample_distance, second_subsample_size, output_tsv, logger):
     df = get_df_for_pca(sqlite_path)
     data_columns = df.columns.to_list()
     logger.debug("Num data points: %s", len(df))
@@ -141,8 +141,9 @@ def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, second_subsam
     logger.debug("Num data points where both taxa are species level: %s", len(df[df['is_both_species']]))
 
 
+    eukdetect_paper_example = ("370354", "294381")# E. dispar, E. hystolytica
     subsample = pick_subsample(df[df['is_both_species']],
-            initial_taxa = [("370354", "294381")], # E. dispar, E. hystolytica
+            initial_taxa = [eukdetect_paper_example], 
             DISTANCE_MIN = subsample_distance) 
 
     logger.debug("Num subsampled points: %s", len(subsample))
@@ -150,29 +151,17 @@ def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, second_subsam
     second_subsample = pick_subsample(df[df['is_both_species']],
             initial_taxa = subsample,
             DISTANCE_MIN = second_subsample_distance) 
-    logger.debug("Num subsampled points for a second time: %s, will keep top %s with lowest PCA1", len(second_subsample), second_subsample_size)
-    second_subsample_top_only = df[df.index.map(lambda n: n in second_subsample)].sort_values(by="pca_1").head(second_subsample_size).index.to_list()
+    logger.debug("Num subsampled points for a second time: %s, will keep top %s nearest example", len(second_subsample), second_subsample_size)
 
-    third_subsample = pick_subsample(df[df['is_both_species']],
-            initial_taxa = second_subsample,
-            DISTANCE_MIN = third_subsample_distance) 
-    logger.debug("Num subsampled points for a third time: %s, will keep top %s with lowest PCA1", len(third_subsample), third_subsample_size)
-
-    xs = df[df.index.map(lambda n: n in third_subsample)]
-
-    eukdetect_paper_example = ("370354", "294381")
     eukdetect_x,eukdetect_y = df.loc[eukdetect_paper_example][["pca_1", "pca_2"]]
     logger.debug("Eukdetect example, PCA1 = %s, PCA2 = %s", eukdetect_x,eukdetect_y)
 
     df['distance_from_example'] = [euclidean((x,y), (eukdetect_x,eukdetect_y)) for x,y in zip(df["pca_1"], df["pca_2"])]
     
-    third_subsample_top_only = df[df.index.map(lambda n: n in third_subsample)].sort_values(by="pca_1").head(third_subsample_size).index.to_list()
-    third_subsample_nearest_example_only = df[df.index.map(lambda n: n in third_subsample)].sort_values(by="distance_from_example").head(fourth_subsample_size).index.to_list()
+    second_subsample_nearest_example_only = df[df.index.map(lambda n: n in second_subsample)].sort_values(by="distance_from_example").head(second_subsample_size).index.to_list()
 
-    df["is_picked_for_representative_subset"] =  df.index.map(lambda n: n in subsample)
-#    df["is_picked_for_focused_subset"] =  df.index.map(lambda n: n in second_subsample_top_only)
-#    df["is_picked_for_top_subset"] =  df.index.map(lambda n: n in third_subsample_top_only)
-    df["is_picked_for_star_subset"] =  df.index.map(lambda n: n in third_subsample_nearest_example_only)
+    df["is_picked_for_broad_subset"] =  df.index.map(lambda n: n in subsample)
+    df["is_picked_for_focused_subset"] =  df.index.map(lambda n: n in second_subsample_nearest_example_only)
     df = df.reset_index()
     ncbi = NCBITaxa2(refdb_ncbi)
     t = ncbi.get_taxid_translator(set(df["taxon_a"].values) | set(df["taxon_b"].values))
@@ -183,7 +172,7 @@ def do(refdb_ncbi, refdb_markers, sqlite_path, subsample_distance, second_subsam
     df[lca_columns] = [ncbi.lca_info([taxon_a, taxon_b]) for taxon_a, taxon_b in zip(df["taxon_a"], df["taxon_b"])]
 
     df = df.sort_values(by="pca_1", ascending = False)
-    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked_for_representative_subset", "is_picked_for_star_subset", "is_both_species"] + lca_columns + ["pca_1", "pca_2"] + data_columns ]
+    df = df[["taxon_a", "taxon_a_name", "taxon_b", "taxon_b_name", "is_picked_for_broad_subset", "is_picked_for_focused_subset", "is_both_species"] + lca_columns + ["pca_1", "pca_2"] + data_columns ]
     df.to_csv(output_tsv, index = False, sep = "\t", float_format='%.3f')
 
 
@@ -196,11 +185,8 @@ def opts(argv):
     parser.add_argument("--refdb-markers", type=str, action="store", dest="refdb_markers", help = "marker genes per species csv", required = True)
     parser.add_argument("--input-sqlite", type=str, action="store", dest="sqlite_path", required=True)
     parser.add_argument("--subsample-pca-distance", type=float, action = "store", dest="subsample_distance", default = 0.05)
-    parser.add_argument("--second-subsample-pca-distance", type=float, action = "store", dest="second_subsample_distance", default = 0.05 / 3)
-    parser.add_argument("--second-subsample-size", type=int, action = "store", dest="second_subsample_size", default = 100)
-    parser.add_argument("--third-subsample-pca-distance", type=float, action = "store", dest="third_subsample_distance", default = 0.05 / 9)
-    parser.add_argument("--third-subsample-size", type=int, action = "store", dest="third_subsample_size", default = 100)
-    parser.add_argument("--fourth-subsample-size", type=int, action = "store", dest="fourth_subsample_size", default = 50)
+    parser.add_argument("--second-subsample-pca-distance", type=float, action = "store", dest="second_subsample_distance", default = 0.005)
+    parser.add_argument("--second-subsample-size", type=int, action = "store", dest="second_subsample_size", default = 50)
     parser.add_argument("--verbose", action="store_true", dest="verbose")
     parser.add_argument("--output-tsv", type=str, action="store", dest="output_tsv", required=True)
     return parser.parse_args(argv)

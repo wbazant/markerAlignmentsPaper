@@ -161,7 +161,15 @@ tmpLeaveOneOut/precisionBySpeciesLeaveOneOut.tsv: tmpLeaveOneOut/wgsimMutationRa
 
 pairsAll/confusable_pairs.tsv: tmp/wgsimMutationRate.json refdb/ncbi_eukprot_met_arch_markers.fna
 	mkdir -pv pairsAll
-	python3 scripts/pick_pairs.py --refdb-ncbi refdb/taxa.sqlite --refdb-markers  refdb/marker_genes_per_species.csv --input-sqlite tmp/100.0.0.0.0.alignments.sqlite --subsample-pca-distance 0.05 --verbose --output-tsv pairsAll/confusable_pairs.tsv
+	python3 scripts/pick_pairs.py \
+		--refdb-ncbi refdb/taxa.sqlite \
+		--refdb-markers  refdb/marker_genes_per_species.csv \
+		--input-sqlite tmp/100.0.0.0.0.alignments.sqlite \
+		--subsample-pca-distance 0.05 \
+		--second-subsample-pca-distance 0.005 \
+		--second-subsample-size 50 \
+    --verbose \
+		--output-tsv pairsAll/confusable_pairs.tsv
 
 pairsHi/conf.yaml: pairsAll/confusable_pairs.tsv
 	mkdir -pv pairsHi/tmpsim

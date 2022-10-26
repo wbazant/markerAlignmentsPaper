@@ -20,7 +20,7 @@ fi
 
 #100787,Verticillium_longisporum
 join -t , -11 -24 \
-   <(  perl -nE 'if($. ==1) {next}; my ($ta, $na, $tb, $nb, $ip)  = split "\t"; next unless $ip eq 'True'; say $ta; say $tb' $confusablePairsTsv | sort -u ) \
+   <(  perl -nE 'if($. ==1) {next}; my ($ta, $na, $tb, $nb, $ipb, $ipf)  = split "\t"; next unless $ipb eq 'True' or $ipf eq 'True'; say $ta; say $tb' $confusablePairsTsv | sort -u ) \
    <( tail -n+2 $refdbDir/marker_genes_per_species.csv | sort -k4,4 -t , ) \
   | cut -f 1,4 -d, > $intermediateSimDir/picked-pairs.csv
 

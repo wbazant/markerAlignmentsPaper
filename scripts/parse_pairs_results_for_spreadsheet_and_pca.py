@@ -25,20 +25,14 @@ header_data = [
   ('No results', 'NR'),
 ]
 
-header_shortcuts = dict(header_data)
+header_label_to_shortcut = dict(header_data)
 header = [x for x,y in header_data]
-
-def add_stats(counts):
-    s = sum(counts.values())
-
-    counts_with_stats = counts.copy()
-
-    return counts_with_stats
+header_shortcuts = [y for x,y in header_data]
 
 def sc(ncbi, all_results, input_file, taxid_a, taxid_b, lca_taxid, lca_name, lca_rank, lca_genus):
     if (taxid_a, taxid_b) not in all_results[input_file]:
         return "XXX"
-    return header_shortcuts[all_results[input_file][(taxid_a, taxid_b)]]
+    return header_label_to_shortcut[all_results[input_file][(taxid_a, taxid_b)]]
 
     
 def do_one_line(ncbi, ls):
@@ -74,7 +68,6 @@ def do_one_line(ncbi, ls):
         return taxon_a, taxon_b, "No results"
 
 def do_one(ncbi, input_file):
-    counts = {h:0 for h in header}
     cs_for_species = {}
     with open(input_file, 'r') as f:
         for l in f:
@@ -85,18 +78,15 @@ def do_one(ncbi, input_file):
                 taxon_a, taxon_b, c = do_one_line(ncbi, xs)
             except KeyError as e:
                 raise ValueError(input_file, xs, l)
-            counts[c]+=1
             cs_for_species[(taxon_a, taxon_b)] = c
+    return cs_for_species
 
-    counts_with_stats = add_stats(counts)
-    return counts_with_stats, cs_for_species
 
 def read_all(refdb_ncbi, input_files, **kwargs):
     ncbi = NCBITaxa2(refdb_ncbi)
 
     all_results = {}
     input_names = []
-    all_counts = {}
     for input_file in input_files:
         if ":" in input_file:
             (input_name, input_path) = input_file.split(":")
@@ -104,8 +94,7 @@ def read_all(refdb_ncbi, input_files, **kwargs):
             input_name = input_file
             input_path = input_file
         input_names.append(input_name)
-        counts, cs_for_species = do_one(ncbi, input_path)
-        all_counts[input_name] = counts
+        cs_for_species = do_one(ncbi, input_path)
         all_results[input_name] = cs_for_species
 
     all_taxids = set([x for xxx in all_results.values() for xx in xxx for x in xx ])
@@ -119,12 +108,16 @@ def read_all(refdb_ncbi, input_files, **kwargs):
         ids = [str(taxid_a) + "|" + taxid_to_name[taxid_a], str(taxid_b) + "|" + taxid_to_name[taxid_b], str(lca_taxid) + "|" +lca_name, lca_rank, lca_genus ]
         results = [sc(ncbi, all_results, input_name, taxid_a, taxid_b, lca_taxid, lca_name, lca_rank, lca_genus) for input_name in input_names]
         data_detailed.append(ids+results)
-    df_detailed = pandas.DataFrame(columns = columns_detailed, data = data_detailed)
+    return pandas.DataFrame(columns = columns_detailed, data = data_detailed), input_names
 
-    columns_summary = ["Name"] + ["{}: {}".format(header_shortcuts[h], h) for h in header]
-    data_summary = [[input_name] + [ all_counts[input_name][h] for h in header ] for input_name in input_names]
-    df_summary = pandas.DataFrame(columns = columns_summary, data = data_summary)
-    return df_detailed, df_summary
+def summarise_df_detailed(df_detailed, input_names):
+    columns_summary = ["Name"] + ["{}: {}".format(header_label_to_shortcut[h], h) for h in header]
+    data_summary = []
+    for input_name in input_names:
+        counts = df_detailed[input_name].value_counts().to_dict()
+        data_summary.append([input_name] + [counts[h] if h in counts else 0 for h in header_shortcuts])
+    return pandas.DataFrame(columns = columns_summary, data = data_summary)
+
 #ABOLG: has A, has B, has others, good LCA, good genus
 #ABOlG: has A, has B, has others, no good LCA, good genus
 #ABOLg: has A, has B, has others, good LCA, no good genus
@@ -171,7 +164,8 @@ def fix_column_width(writer, sheet_name, df):
     worksheet.set_column(0, len(lengths), max(lengths))
 
 def do(refdb_ncbi, input_files, pca_tsv, output_tsv, output_png, output_xlsx):
-    results_df_detailed, results_df_summary = read_all(refdb_ncbi, input_files)
+    results_df_detailed, input_names = read_all(refdb_ncbi, input_files)
+    results_df_summary = summarise_df_detailed(results_df_detailed, input_names)
     results_df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
     results_df_detailed = results_df_detailed.drop(["taxon_lca_ab", "rank_lca_ab", "genus_lca_ab"], axis=1)

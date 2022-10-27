@@ -165,7 +165,6 @@ def fix_column_width(writer, sheet_name, df):
 
 def do(refdb_ncbi, input_files, pca_tsv, output_tsv, output_png, output_xlsx):
     results_df_detailed, input_names = read_all(refdb_ncbi, input_files)
-    results_df_summary = summarise_df_detailed(results_df_detailed, input_names)
     results_df_detailed.to_csv(output_tsv, sep = "\t", index = False)
 
     results_df_detailed = results_df_detailed.drop(["taxon_lca_ab", "rank_lca_ab", "genus_lca_ab"], axis=1)
@@ -175,13 +174,19 @@ def do(refdb_ncbi, input_files, pca_tsv, output_tsv, output_png, output_xlsx):
     pca_df = pandas.read_csv(pca_tsv, sep = "\t").astype({"taxon_a": str, "taxon_b": str})
     df = pca_df.merge(results_df_detailed, on = ["taxon_a", "taxon_b"])
 
-    fig, axs = plt.subplots(3, 2)
+    fig, axs = plt.subplots(3, 4)
     subplot(df, "EukDetectLo", "EukDetect, 0.01 cov.", axs[0][0])
     subplot(df, "EukDetectMid", "EukDetect, 0.05 cov.", axs[1][0])
     subplot(df, "EukDetectHi", "EukDetect, 0.10 cov.", axs[2][0])
-    subplot(df, "CORRALLo", "CORRAL, 0.01 cov.", axs[0][1])
-    subplot(df, "CORRALMid", "CORRAL, 0.05 cov.", axs[1][1])
-    subplot(df, "CORRALHi", "CORRAL, 0.10 cov.", axs[2][1])
+    subplot(df[df['is_picked_for_focused_subset']], "EukDetectLo", "<-", axs[0][1])
+    subplot(df[df['is_picked_for_focused_subset']], "EukDetectMid", "<-", axs[1][1])
+    subplot(df[df['is_picked_for_focused_subset']], "EukDetectHi", "<-", axs[2][1])
+    subplot(df, "CORRALLo", "CORRAL, 0.01 cov.", axs[0][2])
+    subplot(df, "CORRALMid", "CORRAL, 0.05 cov.", axs[1][2])
+    subplot(df, "CORRALHi", "CORRAL, 0.10 cov.", axs[2][2])
+    subplot(df[df['is_picked_for_focused_subset']], "CORRALLo", "<-", axs[0][3])
+    subplot(df[df['is_picked_for_focused_subset']], "CORRALMid", "<-", axs[1][3])
+    subplot(df[df['is_picked_for_focused_subset']], "CORRALHi", "<-", axs[2][3])
 
     fig.savefig(output_png, bbox_inches='tight', dpi=199)
 
@@ -190,14 +195,24 @@ def do(refdb_ncbi, input_files, pca_tsv, output_tsv, output_png, output_xlsx):
     cs = df.columns
     df = df.set_index(['taxon_a_name', 'taxon_b_name'])
     
+    results_df_summary = summarise_df_detailed(df[df['is_picked_for_broad_subset']], input_names)
+    results_df_second_summary = summarise_df_detailed(df[df['is_picked_for_focused_subset']], input_names)
     with pandas.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-        sheet_name_summary = "Coding legend and result counts"
+        sheet_name_summary = "Broad subset result counts"
         results_df_summary.transpose().to_excel(writer, sheet_name=sheet_name_summary, header = False)
         worksheet_summary = writer.sheets[sheet_name_summary]
         cell_format_summary = writer.book.add_format({'bold': True})
         worksheet_summary.set_column(0, 0, 30, cell_format_summary )
         worksheet_summary.set_column(1, 10, 20)
         worksheet_summary.set_row(0, 20, cell_format_summary )
+
+        sheet_name_second_summary = "Focused subset result counts"
+        results_df_second_summary.transpose().to_excel(writer, sheet_name=sheet_name_second_summary, header = False)
+        worksheet_second_summary = writer.sheets[sheet_name_second_summary]
+        cell_format_second_summary = writer.book.add_format({'bold': True})
+        worksheet_second_summary.set_column(0, 0, 30, cell_format_second_summary )
+        worksheet_second_summary.set_column(1, 10, 20)
+        worksheet_second_summary.set_row(0, 20, cell_format_second_summary )
 
         sheet_name_detailed = "PCA coordinates and results"
         df.to_excel(writer, sheet_name = sheet_name_detailed,  float_format="%.3f")

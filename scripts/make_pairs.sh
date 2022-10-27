@@ -18,11 +18,13 @@ if ! ( [ "$refdbDir" -a "$confusablePairsTsv" -a "$intermediateSimDir"  -a "$sim
 fi
 
 
-#100787,Verticillium_longisporum
+perl -nE 'if($. ==1) {next}; my ($ta, $na, $tb, $nb, $ipb, $ipf)  = split "\t"; next unless $ipb eq 'True' or $ipf eq 'True'; say "${ta}\t${tb}"' $confusablePairsTsv \
+  > $intermediateSimDir/picked-pairs.tsv
+
 join -t , -11 -24 \
-   <(  perl -nE 'if($. ==1) {next}; my ($ta, $na, $tb, $nb, $ipb, $ipf)  = split "\t"; next unless $ipb eq 'True' or $ipf eq 'True'; say $ta; say $tb' $confusablePairsTsv | sort -u ) \
-   <( tail -n+2 $refdbDir/marker_genes_per_species.csv | sort -k4,4 -t , ) \
-  | cut -f 1,4 -d, > $intermediateSimDir/picked-pairs.csv
+  <( cat $intermediateSimDir/picked-pairs.tsv | xargs -n1 echo | sort -u ) \
+  <( tail -n+2 $refdbDir/marker_genes_per_species.csv | sort -k4,4 -t , ) \
+  | cut -f 1,4 -d, > $intermediateSimDir/species-picked-for-pairs.csv
 
 mkdir -pv $intermediateSimDir/singles
 
@@ -48,6 +50,8 @@ while(<$fh>){
   pop @xs;
   pop @xs;
   my $s = join "-", @xs;
+  # refdb weird case where this does not match
+  $s = "Diaporthe_longicolla_MSPL_11-6" if $s eq "Diaporthe_longicolla_MSPL_10-6";
   my $taxid = $speciesToKeep{$s};
   next unless $taxid;
   if ($currentS ne $s){
@@ -60,7 +64,7 @@ while(<$fh>){
   print $outfh ">$_";
 }
 close $outfh if $outfh;
-' $intermediateSimDir/picked-pairs.csv $refdbDir/ncbi_eukprot_met_arch_markers.fna $intermediateSimDir/singles
+' $intermediateSimDir/species-picked-for-pairs.csv $refdbDir/ncbi_eukprot_met_arch_markers.fna $intermediateSimDir/singles
 
 cat <<EOF > $outputConf
 output_dir: "$outputResults"
@@ -76,7 +80,8 @@ eukdetect_dir: "$eukdetectDir"
 samples:
 EOF
 
-perl -nE 'if($. ==1) {next}; my ($taxonA, $na, $taxonB, $nb, $ip)  = split "\t"; next unless $ip eq 'True'; say "${taxonA}\t${taxonB}" ' $confusablePairsTsv \
+
+cat $intermediateSimDir/picked-pairs.tsv \
   | while read taxonA taxonB; do 
   sample="taxonA${taxonA}taxonB${taxonB}"
   sourceA="$intermediateSimDir/singles/${taxonA}.fa"
@@ -87,10 +92,14 @@ perl -nE 'if($. ==1) {next}; my ($taxonA, $na, $taxonB, $nb, $ip)  = split "\t";
   numReadsB=$(grep -v '>' $sourceB | perl -pe chomp | wc -c | CVG=$coverage perl -nE 'chomp; say sprintf("%d", ($_ / 100) * $ENV{CVG})' )
   if [ $numReadsA -gt 0 -a $numReadsB -gt 0 ] ; then
     echo "  $sample:" >> $outputConf
-    wgsim -S 1337 -1100 -2100 -e 0.0 -r 0.0 -N $numReadsA $sourceA $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpA.2.fq
-    wgsim -S 1337 -1100 -2100 -e 0.0 -r 0.0 -N $numReadsB $sourceB $intermediateSimDir/tmpB.1.fq $intermediateSimDir/tmpB.2.fq
-    cat $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpB.1.fq > "$simPath/$sample.1.fq"
-    cat $intermediateSimDir/tmpA.2.fq $intermediateSimDir/tmpB.2.fq > "$simPath/$sample.2.fq"
+    if [ -f "$simPath/$sample.1.fq" ] ; then
+      echo "File exists: $simPath/$sample.1.fq, skipping wgsim for $sample"
+    else
+      wgsim -S 1337 -1100 -2100 -e 0.0 -r 0.0 -N $numReadsA $sourceA $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpA.2.fq
+      wgsim -S 1337 -1100 -2100 -e 0.0 -r 0.0 -N $numReadsB $sourceB $intermediateSimDir/tmpB.1.fq $intermediateSimDir/tmpB.2.fq
+      cat $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpB.1.fq > "$simPath/$sample.1.fq"
+      cat $intermediateSimDir/tmpA.2.fq $intermediateSimDir/tmpB.2.fq > "$simPath/$sample.2.fq"
+    fi
   fi
 done
-rm  $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpA.2.fq $intermediateSimDir/tmpB.1.fq $intermediateSimDir/tmpB.2.fq
+rm -f $intermediateSimDir/tmpA.1.fq $intermediateSimDir/tmpA.2.fq $intermediateSimDir/tmpB.1.fq $intermediateSimDir/tmpB.2.fq

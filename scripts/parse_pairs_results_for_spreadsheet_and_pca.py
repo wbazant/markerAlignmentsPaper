@@ -41,19 +41,23 @@ def sc(ncbi, all_results, input_file, taxid_a, taxid_b, lca_taxid, lca_name, lca
     return header_shortcuts[all_results[input_file][(taxid_a, taxid_b)]]
 
     
-def do_one_line(ncbi, xs):
+def do_one_line(ncbi, ls):
+    xs = [l for l in ls]
     sample = xs.pop(0)
 
     m = re.search('taxonA(.*)taxonB(.*)', sample)
     if not m:
-        raiseValueError(sample)
+        raise ValueError(sample)
     taxon_a = int(m.group(1))
     taxon_b = int(m.group(2))
 
     pair_lca_taxid, pair_lca_name, pair_lca_rank, pair_lca_genus = ncbi.lca_info([taxon_a, taxon_b])
     n = int(xs.pop(0))
     if n:
-        vs = [int(ncbi.get_taxid_from_string(x)) for x in xs]
+        try:
+          vs = [int(ncbi.get_taxid_from_string(x)) for x in xs]
+        except ValueError as e:
+            raise ValueError(ls, e)
         result = []
         result.append("has A" if taxon_a in vs else "misses A")
         result.append("has B" if taxon_b in vs else "misses B")

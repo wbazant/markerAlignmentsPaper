@@ -171,22 +171,6 @@ pairsAll/confusable_pairs.tsv: tmp/wgsimMutationRate.json refdb/ncbi_eukprot_met
     --verbose \
 		--output-tsv pairsAll/confusable_pairs.tsv
 
-pairsHi/conf.yaml: pairsAll/confusable_pairs.tsv
-	mkdir -pv pairsHi/tmpsim
-	mkdir -pv pairsHi/input
-	bash scripts/make_pairs.sh refdb pairsAll/confusable_pairs.tsv pairsHi/tmpsim pairsHi/input pairsHi/conf.yaml pairsHi/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna 0.1
-
-pairsHi/eukdetect-results-summary.tsv: pairsHi/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
-	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules pairsHi/eukdetect.rules
-	bash scripts/run_eukdetect_and_summarise.sh pairsHi/conf.yaml 30 pairsHi/eukdetect.rules pairsHi/eukdetect-results-summary.tsv pairsHi/eukdetect-results-summary-unfiltered.tsv
-
-pairsHiBowtie2/results/our-method.results-summary.tsv: pairsHi/conf.yaml
-	mkdir -pv pairsHiBowtie2
-	mkdir -pv pairsHiBowtie2/results.tmp
-	mkdir -pv pairsHiBowtie2/results
-	ls `pwd`/pairsHi/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsHiBowtie2/in.tsv
-	bash scripts/run_CORRAL.sh `pwd`/pairsHiBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsHiBowtie2/work `pwd`/pairsHiBowtie2/results.tmp `pwd`/pairsHiBowtie2/results
-
 pairsLo/conf.yaml: pairsAll/confusable_pairs.tsv
 	mkdir -pv pairsLo/tmpsim
 	mkdir -pv pairsLo/input
@@ -220,6 +204,22 @@ pairsMidBowtie2/results/our-method.results-summary.tsv: pairsMid/conf.yaml
 	mkdir -pv pairsMidBowtie2/results
 	ls `pwd`/pairsMid/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsMidBowtie2/in.tsv
 	bash scripts/run_CORRAL.sh `pwd`/pairsMidBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsMidBowtie2/work `pwd`/pairsMidBowtie2/results.tmp `pwd`/pairsMidBowtie2/results
+
+pairsHi/conf.yaml: pairsAll/confusable_pairs.tsv
+	mkdir -pv pairsHi/tmpsim
+	mkdir -pv pairsHi/input
+	bash scripts/make_pairs.sh refdb pairsAll/confusable_pairs.tsv pairsHi/tmpsim pairsHi/input pairsHi/conf.yaml pairsHi/results `pwd`/EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30 ncbi_eukprot_met_arch_markers.fna 0.1
+
+pairsHi/eukdetect-results-summary.tsv: pairsHi/conf.yaml EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules
+	cp EukDetect-ad9edf11f5b458f11386b8a4b7f0e70f7bd69c30/rules/eukdetect.rules pairsHi/eukdetect.rules
+	bash scripts/run_eukdetect_and_summarise.sh pairsHi/conf.yaml 30 pairsHi/eukdetect.rules pairsHi/eukdetect-results-summary.tsv pairsHi/eukdetect-results-summary-unfiltered.tsv
+
+pairsHiBowtie2/results/our-method.results-summary.tsv: pairsHi/conf.yaml
+	mkdir -pv pairsHiBowtie2
+	mkdir -pv pairsHiBowtie2/results.tmp
+	mkdir -pv pairsHiBowtie2/results
+	ls `pwd`/pairsHi/input/*fq | sort | perl -pe 's/\n/\t/ if $$. % 2 ' | perl -MFile::Basename -nE 'm{(.*).1.fq}; my $$x = basename $$1; print "$$x\t$$_"' > pairsHiBowtie2/in.tsv
+	bash scripts/run_CORRAL.sh `pwd`/pairsHiBowtie2/in.tsv `pwd`/refdb/ncbi_eukprot_met_arch_markers.fna `pwd`/refdb/busco_taxid_link.txt `pwd`/pairsHiBowtie2/work `pwd`/pairsHiBowtie2/results.tmp `pwd`/pairsHiBowtie2/results
 
 pairsAll/results-summary-all.tsv: pairsHi/eukdetect-results-summary.tsv pairsHiBowtie2/results/our-method.results-summary.tsv pairsLo/eukdetect-results-summary.tsv pairsLoBowtie2/results/our-method.results-summary.tsv pairsMid/eukdetect-results-summary.tsv pairsMidBowtie2/results/our-method.results-summary.tsv
 	python3 scripts/parse_results_for_simulated_pairs.py \

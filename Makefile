@@ -1,4 +1,4 @@
-all: paper.pdf
+all: figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx lowAbundanceEuksBowtie2/results-summary-all.tsv supplement/pairs.xlsx
 
 refdb/ncbi_eukprot_met_arch_markers.fna:
 	mkdir refdb
@@ -319,9 +319,3 @@ supplement/microbiomedb.xlsx: ./microbiomedb_results/BONUS.eukdetect.lineage_abu
 		--input-results-dir ./microbiomedb_results --input-name-postfix .eukdetect.lineage_abundance.tsv \
 		--output-xlsx supplement/microbiomedb.xlsx
 
-
-paper.pdf: paper.md biblio.bib figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx lowAbundanceEuksBowtie2/results-summary-all.tsv supplement/pairs.xlsx
-	perl -pe 's/≥/\$$\\geq\$$/g; s/μ/\$$\\mu\$$/g; s/≤/\$$\\leq\$$/g' paper.md >  out.md
-	pandoc -s --bibliography biblio.bib  --citeproc --csl bmc-bioinformatics.csl -f markdown out.md  --pdf-engine=xelatex -o paper.pdf
-	perl -pe 's/≥/>=/g; s/μ/M/g; s/≤/<=/g; s/for .*?lust.*?ignments/for Clustering Of Related Reference ALignments/g' paper.md >  out.md
-	pandoc -s --bibliography biblio.bib  --citeproc --csl bmc-bioinformatics.csl -f markdown out.md  --pdf-engine=xelatex -o paper.rtf

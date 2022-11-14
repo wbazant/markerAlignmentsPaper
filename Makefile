@@ -1,4 +1,8 @@
-all: figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv supplement/wgsimDoubled.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx lowAbundanceEuksBowtie2/results-summary-all.tsv supplement/pairs.xlsx
+results: supplement/wgsim.tsv  supplement/wgsimLeaveOneOut.tsv unknownEuksBowtie2/results-summary-all.tsv supplement/simulatedReads.xlsx supplement/diabimmune.xlsx supplement/microbiomedb.xlsx lowAbundanceEuksBowtie2/results-summary-all.tsv supplement/pairs.xlsx
+
+old-figures: figures/wgsimMutationRate.png figures/valuesOverMutationRate.png figures/valuesOverMutationRateUnknownSpecies.png  figures/leaveOneOut.png figures/bars.png figures/barsLeaveOneOut.png figures/precisionBySpecies.png 
+
+unused-results: supplement/wgsimDoubled.tsv supplement/crossvalidation_results_joined_with_num_reads.tsv
 
 refdb/ncbi_eukprot_met_arch_markers.fna:
 	mkdir refdb
@@ -255,7 +259,6 @@ figures/barsLeaveOneOut.png: tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json
 	mkdir -pv figures
 	python3 scripts/plot_bars.py --input-json tmpLeaveOneOut/wgsimMutationRateLeaveOneOut.json --output-png figures/barsLeaveOneOut.png 
 
-# deprecated - Dan made a better figure
 figures/precisionBySpecies.png: tmp/wgsimMutationRate.json
 	python3 scripts/plot_precision_by_species.py --input-alignments-sqlite tmp/100.0.0.0.0.alignments.sqlite --output-png figures/precisionBySpecies.png --refdb-ncbi refdb/taxa.sqlite --aggregation-level species --output-tsv supplement/precisionBySpecies.tsv
 
@@ -281,7 +284,6 @@ supplement/pairs.xlsx: pairsAll/confusable_pairs.tsv pairsHi/eukdetect-results-s
 # was interesting once
 supplement/crossvalidation_results_joined_with_num_reads.tsv: refdbCrossValidation/nineTenth.fna.1.bt2 unknownEuksBowtie2/results-summary-all.tsv
 	join -11 -21 -t $$'\t' <( join -11 -21 -t $$'\t' <( cat refdbCrossValidation/busco_taxid_link.txt | perl -nE 'chomp; my ($$x, $$taxid) = split "\t"; my ($$s) = $$x =~ m{\w+-(.*)-\d+at2759.*}; next unless $$s; say join "\t", $$s, $$taxid' | sort -u ) <( grep -c '^>' refdbCrossValidation/oneTenthFolder/* | rev | cut -f 1 -d / | rev | tr : $$'\t' ) | cut -f 2,3 | perl -pE 'if($$.==1){say "taxid\tnum_reads"}'  | sort -r ) <(  perl -pE 'if($$.==1){s/^/taxid\t/}; s/\|/\t/;' unknownEuksBowtie2/results-summary-all.tsv | sort -r ) > supplement/crossvalidation_results_joined_with_num_reads.tsv
-
 
 supplement/wgsim.tsv: tmp/wgsimMutationRate.json
 	mkdir -pv supplement

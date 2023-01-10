@@ -167,10 +167,6 @@ add_results(
         )
 
 summary = pandas.concat(summaries).sort_values(by=["Protocol", "SampleID", "Sheet name"])
-#results_rl_only = read_results_folder(err_to_d, d_to_protocol, err_to_read_count, err_to_al_best,  "results-rl-only", ".", ".tsv")
-#results_c_only = read_results_folder(err_to_d, d_to_protocol, err_to_read_count, err_to_al_best,  "results-c-only", ".", ".tsv")
-#results_mapq_only = read_results_folder(err_to_d, d_to_protocol, err_to_read_count, err_to_al_best,  "results-mapq-only", ".", ".tsv")
-#results_eukdetect = read_results_folder(err_to_d, d_to_protocol, err_to_read_count, err_to_al_best,  "results-EukDetect", "_", "_filtered_hits_table.txt")
 
 def save_df(writer, sheet_name, df, float_format="%.4f", width = None):
     df.to_excel(writer, sheet_name = sheet_name, float_format=float_format, index=False)
@@ -178,14 +174,6 @@ def save_df(writer, sheet_name, df, float_format="%.4f", width = None):
     lengths = [len(str(df[col].name)) for idx, col in enumerate(df)]
     max_length = width or max(lengths)
     worksheet.set_column(0, len(lengths), max_length)
-
-#legend.append()
-
-# TODO legend
-#legend.append(["best+RL+C+MAPQ", "best", "read length, counts per taxon, MAPQ", "--min-read-query-length 60 --min-taxon-num-markers 2 --min-taxon-num-alignments 4 --min-read-mapq 30"])
-
-# TODO EukDetect all hits
-# results-EukDetect/filtering/ERR4097268_all_hits_table.txt
 
 with pandas.ExcelWriter("all-results.xlsx", engine="xlsxwriter") as writer:
     save_df(writer, "Legend", pandas.DataFrame(columns = legend_columns, data = legend))
